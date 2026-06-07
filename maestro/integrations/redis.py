@@ -136,7 +136,7 @@ class RedisClient:
                     continue  # Special case because bool subclasses int
                 break
         else:
-            raise TypeError(f"No state encoder exists for type {encoder_type.__name__}")
+            raise TypeError(f"No state encoder exists for type {type(value).__name__}")
 
         encoded_state = CachedValue(
             value=state_encoder_map[encoder_type](value),

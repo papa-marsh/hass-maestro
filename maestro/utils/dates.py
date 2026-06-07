@@ -39,6 +39,7 @@ def format_duration(duration: timedelta, verbose: bool = False) -> str:
         output = f"{duration_seconds}s"
         if verbose:
             return output.replace("s", " second" if duration_seconds == 1 else " seconds")
+        return output
 
     output = ""
     total_seconds = duration_seconds

@@ -82,8 +82,8 @@ class MaestroFlask(Flask):
 
     def _shutdown_handler(self) -> None:
         self.websocket_manager.set_last_connected()
-        self.app_context().push()
-        MaestroTriggerManager.fire_triggers(MaestroEvent.SHUTDOWN, self)
+        with self.app_context():
+            MaestroTriggerManager.fire_triggers(MaestroEvent.SHUTDOWN, self)
 
     def _initialize_test_environment(self) -> None:
         """Initialize in-memory scheduler for registering decorators while testing."""

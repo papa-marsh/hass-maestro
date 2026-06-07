@@ -3,7 +3,7 @@ from maestro.integrations.home_assistant.domain import Domain
 
 
 class InputNumber(Entity):
-    domain = Domain.INPUT_SELECT
+    domain = Domain.INPUT_NUMBER
 
     def set_value(self, value: float) -> None:
         self.perform_action("set_value", value=value)

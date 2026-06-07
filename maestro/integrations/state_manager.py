@@ -130,7 +130,7 @@ class StateManager:
         with self.redis_client.lock(key=entity_id, timeout_seconds=60):
             entity_data = self.fetch_hass_entity(entity_id)
 
-            if state and state != entity_data.state:
+            if state is not None and state != entity_data.state:
                 entity_data.state = state
                 data_updated = True
 
@@ -254,7 +254,7 @@ class StateManager:
 
     def fetch_cached_entity(self, entity_id: EntityId) -> EntityData | None:
         attributes = {}
-        if not (state := self.get_cached_state(entity_id)):
+        if (state := self.get_cached_state(entity_id)) is None:
             return None
         if not isinstance(state, str):
             raise TypeError
