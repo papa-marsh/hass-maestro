@@ -6,7 +6,7 @@ from maestro.utils.logging import log
 def handle_notif_action(event: WebSocketEvent) -> None:
     user_id = event.context.user_id
     action_name = event.data["actionName"]
-    device_name = device_name = event.data["sourceDeviceName"]
+    device_name = event.data["sourceDeviceName"]
 
     log.debug("Processing notif action event", action=action_name, device=device_name)
 

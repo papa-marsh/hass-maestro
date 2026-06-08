@@ -25,8 +25,7 @@ def test_database_tables_exist(mt: MaestroTest) -> None:
         inspector = db.inspect(db.engine)
         table_names = inspector.get_table_names()
 
-        # Verify at least some tables exist (test will fail if no models are defined)
-        assert len(table_names) >= 0, "Database should have tables created"
+        assert isinstance(table_names, list)
 
 
 def test_database_isolation_between_tests(mt: MaestroTest) -> None:
