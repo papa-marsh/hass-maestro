@@ -187,7 +187,7 @@ class HomeAssistantClient:
         }
 
         try:
-            log.info("Sending request to Home Assistant", method=method, path=path, body=body)
+            log.debug("Sending request to Home Assistant", method=method, path=path, body=body)
             response = requests.request(
                 method=method,
                 url=url,
@@ -196,7 +196,7 @@ class HomeAssistantClient:
                 json=body,
                 timeout=30,
             )
-            log.info("Response received", status=response.status_code, content=response.text)
+            log.debug("Response received", status=response.status_code, content=response.text)
 
         except RequestException as e:
             raise HomeAssistantClientError(f"Network error: {e}") from e
