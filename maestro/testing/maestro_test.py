@@ -266,6 +266,46 @@ class MaestroTest:
         """
         self.hass_client.clear_action_calls()
 
+    # MARK: Fired Event Assertions
+
+    def get_fired_events(self, event_type: str | None = None) -> list[FiredEvent]:
+        """Get all events fired to Home Assistant via fire_event(), optionally filtered."""
+        return self.hass_client.get_fired_events(event_type)
+
+    def assert_event_fired(self, event_type: str, **event_data: Any) -> None:
+        """
+        Assert that an event was fired to Home Assistant via fire_event().
+
+        Args:
+            event_type: The event type (e.g., "admin_event")
+            **event_data: Optional event data key-value pairs to match
+        """
+        events = self.get_fired_events(event_type)
+
+        if event_data:
+            events = [
+                event
+                for event in events
+                if all(event.data.get(k) == v for k, v in event_data.items())
+            ]
+
+        assert len(events) > 0, (
+            f"Expected event {event_type} to be fired at least once, "
+            f"but it wasn't. All fired events: {self.hass_client.get_fired_events()}"
+        )
+
+    def assert_event_not_fired(self, event_type: str) -> None:
+        """Assert that an event was NOT fired to Home Assistant via fire_event()."""
+        events = self.get_fired_events(event_type)
+        assert len(events) == 0, (
+            f"Expected event {event_type} to NOT be fired, "
+            f"but it was fired {len(events)} times. Events: {events}"
+        )
+
+    def clear_fired_events(self) -> None:
+        """Clear all recorded fired events."""
+        self.hass_client.clear_fired_events()
+
     # MARK: Entity Assertions
 
     def assert_entity_exists(self, entity: Entity | str) -> None:

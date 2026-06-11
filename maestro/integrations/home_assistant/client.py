@@ -172,6 +172,23 @@ class HomeAssistantClient:
 
         return entities, action_response
 
+    def fire_event(self, event_type: str, **event_data: Any) -> None:
+        """Fire a custom event onto the Home Assistant event bus"""
+        path = f"/api/events/{event_type}"
+
+        response_data, status = self.execute_request(
+            method=HTTPMethod.POST,
+            path=path,
+            body=serialize_datetimes(event_data),
+        )
+
+        if status != HTTPStatus.OK:
+            raise HomeAssistantClientError(
+                f"Failed to fire event {event_type}: status={status}, response={response_data}"
+            )
+
+        log.info("Fired event", event_type=event_type, event_data=event_data)
+
     def execute_request(
         self,
         method: HTTPMethod,

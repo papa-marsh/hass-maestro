@@ -13,7 +13,7 @@ from redis.lock import Lock
 from maestro.domains.entity import Entity
 from maestro.integrations.home_assistant.client import HomeAssistantClient
 from maestro.integrations.home_assistant.domain import Domain
-from maestro.integrations.home_assistant.types import EntityData, EntityId
+from maestro.integrations.home_assistant.types import EntityData, EntityId, FiredEvent
 from maestro.integrations.redis import CachedValueT, RedisClient
 from maestro.utils.dates import local_now
 from maestro.utils.exceptions import MockEntityDoesNotExistError
@@ -68,13 +68,15 @@ class MockHomeAssistantClient(HomeAssistantClient):
     def __init__(self) -> None:
         self._entities: dict[str, EntityData] = {}
         self._action_calls: list[ActionCall] = []
+        self._fired_events: list[FiredEvent] = []
         self._action_response_queue: deque[dict[str, Any]] = deque()
         self._healthy = True
 
     def reset(self) -> None:
-        """Reset mock HASS client and clear stored entities & action calls."""
+        """Reset mock HASS client and clear stored entities, action calls, & fired events."""
         self._entities.clear()
         self._action_calls.clear()
+        self._fired_events.clear()
         self._action_response_queue.clear()
         self._healthy = True
 
@@ -111,6 +113,17 @@ class MockHomeAssistantClient(HomeAssistantClient):
     def clear_action_calls(self) -> None:
         """Remove all stored mock action calls"""
         self._action_calls.clear()
+
+    def get_fired_events(self, event_type: str | None = None) -> list[FiredEvent]:
+        """Get all events fired via fire_event(), optionally filtered by event type."""
+        if event_type is None:
+            return self._fired_events
+
+        return [event for event in self._fired_events if event.type == event_type]
+
+    def clear_fired_events(self) -> None:
+        """Remove all stored mock fired events"""
+        self._fired_events.clear()
 
     def set_action_responses(self, responses: list[dict[str, Any]]) -> None:
         """
@@ -202,6 +215,17 @@ class MockHomeAssistantClient(HomeAssistantClient):
         entities = [self._entities[id] for id in entity_ids if id in self._entities]
 
         return entities, action_response
+
+    @override
+    def fire_event(self, event_type: str, **event_data: Any) -> None:
+        """Record a fired event without hitting a real Home Assistant instance"""
+        fired_event = FiredEvent(
+            time_fired=local_now(),
+            type=event_type,
+            data=event_data,
+            user_id=None,
+        )
+        self._fired_events.append(fired_event)
 
     @override
     def execute_request(
