@@ -10,7 +10,7 @@ def handle_event_fired(event: WebSocketEvent) -> None:
         time_fired=event.time_fired,
         type=event.event_type,
         data=event.data,
-        user_id=event.context.user_id,
+        user_id=event.data.get("user_id") or event.context.user_id,
     )
 
     EventFiredTriggerManager.fire_triggers(fired_event)

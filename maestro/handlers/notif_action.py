@@ -16,7 +16,7 @@ def handle_notif_action(event: WebSocketEvent) -> None:
         data=event.data,
         user_id=user_id,
         name=action_name,
-        action_data=event.data["action_data"],
+        action_data=event.data.get("action_data"),
         device_id=event.data["sourceDeviceID"],
         device_name=device_name,
     )

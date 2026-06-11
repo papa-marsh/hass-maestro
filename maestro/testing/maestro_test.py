@@ -160,6 +160,7 @@ class MaestroTest:
         action_data: Any = None,
         device_id: str = "test_device",
         device_name: str = "Test Device",
+        user_id: str | None = None,
         time_fired: datetime | None = None,
     ) -> None:
         """Simulate a notification action event, triggering registered notif_action_triggers."""
@@ -169,7 +170,7 @@ class MaestroTest:
             time_fired=timestamp,
             type="ios.notification_action_fired",
             data={},
-            user_id=None,
+            user_id=user_id,
             name=action,
             action_data=action_data,
             device_id=device_id,
