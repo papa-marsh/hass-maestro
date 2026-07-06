@@ -11,6 +11,8 @@ from maestro.utils.exceptions import EntityMissingFromRegistryError, MalformedRe
 if TYPE_CHECKING:
     from maestro.domains import Entity
 
+NotifActionDataT = dict | list | str | int | float | bool | None
+
 
 class StateId(str):
     """A validated Home Assistant entity or attribute ID"""
@@ -152,6 +154,6 @@ class NotifActionEvent(FiredEvent):
     """Specific event payload type for iOS notification actions"""
 
     name: str
-    action_data: Any
+    action_data: NotifActionDataT
     device_id: str
     device_name: str

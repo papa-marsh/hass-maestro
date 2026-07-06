@@ -1,5 +1,5 @@
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
+from typing import TYPE_CHECKING, NotRequired, TypedDict
 from uuid import uuid4
 
 from maestro.config import DEFAULT_NOTIF_SOUND, DEFAULT_NOTIF_URL
@@ -8,6 +8,7 @@ from maestro.integrations.home_assistant.domain import Domain
 if TYPE_CHECKING:
     from maestro.domains.person import Person
 
+from maestro.integrations.home_assistant.types import NotifActionDataT
 from maestro.utils.exceptions import NotifActionMappingError
 from maestro.utils.logging import log
 
@@ -52,7 +53,7 @@ class Notif:
         sound: str | None = DEFAULT_NOTIF_SOUND,
         url: str = DEFAULT_NOTIF_URL,
         actions: list[Action] = [],
-        action_data: Any = None,
+        action_data: NotifActionDataT = None,
     ) -> None:
         if tag and not group:
             group = tag
