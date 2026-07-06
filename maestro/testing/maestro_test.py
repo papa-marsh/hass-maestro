@@ -15,6 +15,7 @@ from maestro.integrations.home_assistant.types import (
     EntityData,
     EntityId,
     FiredEvent,
+    NotifActionDataT,
     NotifActionEvent,
     StateChangeEvent,
 )
@@ -157,7 +158,7 @@ class MaestroTest:
     def trigger_notif_action(
         self,
         action: str,
-        action_data: Any = None,
+        action_data: NotifActionDataT = None,
         device_id: str = "test_device",
         device_name: str = "Test Device",
         user_id: str | None = None,

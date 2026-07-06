@@ -4,13 +4,12 @@ from uuid import uuid4
 
 from maestro.config import DEFAULT_NOTIF_SOUND, DEFAULT_NOTIF_URL
 from maestro.integrations.home_assistant.domain import Domain
+from maestro.utils.exceptions import NotifActionMappingError
+from maestro.utils.logging import log
 
 if TYPE_CHECKING:
     from maestro.domains.person import Person
-
-from maestro.integrations.home_assistant.types import NotifActionDataT
-from maestro.utils.exceptions import NotifActionMappingError
-from maestro.utils.logging import log
+    from maestro.integrations.home_assistant.types import NotifActionDataT
 
 
 class Notif:
