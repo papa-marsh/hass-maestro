@@ -72,7 +72,7 @@ class RegistryManager:
             f"{cls.attr_import_string}\n{cls.datetime_import_string}\n\n{new_entry}"
         )
         module_filepath.write_text(content)
-        log.info("Created new registry file", filepath=module_filepath, entity=entity_id)
+        log.info("Created new registry file", filepath=str(module_filepath), entity=entity_id)
 
     @classmethod
     def update_existing_module(cls, entity_data: EntityData) -> None:
@@ -109,7 +109,7 @@ class RegistryManager:
         imports.add(new_entry_parent_class)
 
         cls._write_module(module_filepath, entries, imports)
-        log.info("Added entity to registry", filepath=module_filepath, entity=entity_id)
+        log.info("Added entity to registry", filepath=str(module_filepath), entity=entity_id)
 
     @classmethod
     def prune(cls, force: bool = False) -> list[EntityId]:
@@ -150,7 +150,7 @@ class RegistryManager:
             removed = [e["entity_id"] for e in parsed_entries if e["entity_id"] in stale_ids]
             if not kept_entries:
                 filepath.unlink()
-                log.info("Deleted empty registry module", filepath=filepath, removed=removed)
+                log.info("Deleted empty registry module", filepath=str(filepath), removed=removed)
                 continue
 
             imports = {entry["parent_class"] for entry in kept_entries}
@@ -165,7 +165,7 @@ class RegistryManager:
             ]
             cls._write_module(filepath, entries, imports)
             log.info(
-                "Pruned stale entities from registry module", filepath=filepath, removed=removed
+                "Pruned stale entities from registry module", filepath=str(filepath), removed=removed
             )
 
         cls.redis_client.delete(
