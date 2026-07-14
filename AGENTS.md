@@ -58,6 +58,7 @@ just deploy                            # Rebuild and restart all services
 just build                             # Build Docker image only
 just logs                              # View maestro container logs
 just shell                             # Flask shell with pre-loaded imports
+just prune                             # Remove registry entities no longer in Home Assistant
 ```
 
 Tests use an in-memory SQLite database (overridden in `conftest.py`). No Redis or Home Assistant connection required.
@@ -210,6 +211,8 @@ multi_color_bulb = LightMultiColorBulb("light.multi_color_bulb")
 ```
 
 Registry modules are **code-generated and gitignored** -- never edit them manually (except `__init__.py` and `registry_manager.py`). When an entity already inherits from a custom domain subclass, the manager preserves that parent class during updates.
+
+`RegistryManager.prune()` (invoked via `just prune`) fetches all live entities from Home Assistant and removes registry entries that no longer exist, deleting modules that end up empty and clearing the pruned entities' `REGISTERED:` Redis keys. It refuses to remove more than 25% of the registry unless called with `force=True`.
 
 ### WebSocket System (`integrations/home_assistant/`)
 

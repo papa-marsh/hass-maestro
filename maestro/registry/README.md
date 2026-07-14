@@ -6,6 +6,7 @@ The registry contains auto-generated domain modules that provide strongly-typed 
 
 - **Programmatic Updates**: Each module is automatically generated and updated by `RegistryManager` -- edit with caution
 - **Module Parsing**: Line-by-line formatting is critical for parsing and editing registry modules; do not alter the format
+- **Pruning**: `RegistryManager.prune()` (or `just prune`) removes entries for entities no longer present in Home Assistant. It raises if more than 25% of the registry would be removed, unless called with `force=True`
 - **Disaster Recovery**: Deleting a registry entity (or entire module) and allowing it to recreate should fix most problems
 - **Gitignored**: All generated modules are gitignored. Only `__init__.py`, `registry_manager.py`, and this `README.md` are tracked
 

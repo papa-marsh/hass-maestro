@@ -50,3 +50,7 @@ shell: build
 # Open an interactive bash shell in the container
 bash: build
     docker compose run --rm maestro bash
+
+# Prune registry entities that no longer exist in Home Assistant
+prune: build
+    docker compose run --rm maestro uv run --no-dev python -c "import maestro.integrations; from maestro.registry.registry_manager import RegistryManager; RegistryManager.prune()"
