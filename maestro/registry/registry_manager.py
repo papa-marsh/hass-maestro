@@ -30,13 +30,13 @@ class RegistryManager:
     }
 
     @classmethod
-    def upsert_entity(cls, entity_data: EntityData) -> None:
+    def upsert_entity(cls, entity_data: EntityData, force: bool = False) -> None:
         """Adds or updates an entity to its respective module: maestro/registry/<domain>.py"""
         entity_id = EntityId(entity_data.entity_id)
         module_filepath = cls.registry_dir / f"{entity_id.domain}.py"
         cache_key = RedisClient.build_key(CachePrefix.REGISTERED, entity_id)
 
-        if cached_value := cls.redis_client.get(key=cache_key):
+        if not force and (cached_value := cls.redis_client.get(key=cache_key)):
             last_updated = resolve_timestamp(cached_value)
             if last_updated > local_now() - timedelta(seconds=IntervalSeconds.ONE_DAY):
                 return
@@ -72,7 +72,7 @@ class RegistryManager:
             f"{cls.attr_import_string}\n{cls.datetime_import_string}\n\n{new_entry}"
         )
         module_filepath.write_text(content)
-        log.info("Created new registry file", filepath=str(module_filepath), entity=entity_id)
+        log.info("Created new registry file", filepath=module_filepath, entity=entity_id)
 
     @classmethod
     def update_existing_module(cls, entity_data: EntityData) -> None:
@@ -109,7 +109,13 @@ class RegistryManager:
         imports.add(new_entry_parent_class)
 
         cls._write_module(module_filepath, entries, imports)
-        log.info("Added entity to registry", filepath=str(module_filepath), entity=entity_id)
+        log.info("Added entity to registry", filepath=module_filepath, entity=entity_id)
+
+    @classmethod
+    def force_registry_update(cls, entity_id: str) -> None:
+        """Fetch an entity from Home Assistant and update its registry entry"""
+        entity_data = HomeAssistantClient().get_entity(entity_id)
+        cls.upsert_entity(entity_data, force=True)
 
     @classmethod
     def prune(cls, force: bool = False) -> list[EntityId]:
@@ -150,7 +156,7 @@ class RegistryManager:
             removed = [e["entity_id"] for e in parsed_entries if e["entity_id"] in stale_ids]
             if not kept_entries:
                 filepath.unlink()
-                log.info("Deleted empty registry module", filepath=str(filepath), removed=removed)
+                log.info("Deleted empty registry module", filepath=filepath, removed=removed)
                 continue
 
             imports = {entry["parent_class"] for entry in kept_entries}
@@ -165,7 +171,7 @@ class RegistryManager:
             ]
             cls._write_module(filepath, entries, imports)
             log.info(
-                "Pruned stale entities from registry module", filepath=str(filepath), removed=removed
+                "Pruned stale entities from registry module", filepath=filepath, removed=removed
             )
 
         cls.redis_client.delete(

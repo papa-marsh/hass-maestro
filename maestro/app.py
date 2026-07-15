@@ -133,6 +133,9 @@ def make_shell_context() -> dict:
     hass = HomeAssistantClient()
     redis = RedisClient()
     sm = StateManager(hass_client=hass, redis_client=redis)
-    registry = TriggerManager.get_registry()
+    rm = RegistryManager()
+    triggers = TriggerManager.get_registry()
+
+    print("Pre-loaded variables: hass, redis, sm, rm, triggers")  # noqa: T201
 
     return locals()
