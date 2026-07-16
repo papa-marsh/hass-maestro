@@ -271,6 +271,8 @@ class StateManager:
 
     def delete_cached_entity(self, entity_id: EntityId) -> int:
         """Remove an entity and its attributes from the cache. Returns the count deleted."""
+        self.redis_client.delete(RedisClient.build_key(CachePrefix.REGISTERED, entity_id))
+
         if keys_to_delete := self.get_all_entity_keys(entity_id):
             return self.redis_client.delete(*keys_to_delete)
 

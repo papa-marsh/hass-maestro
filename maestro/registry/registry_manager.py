@@ -123,17 +123,23 @@ class RegistryManager:
         Remove registry entries for entities that no longer exist in Home Assistant.
         Refuses to prune more than `prune_safety_threshold` of the registry unless forced.
         """
+        from maestro.integrations.state_manager import StateManager
+
+        state_manager = StateManager()
+
         live_entity_ids = {entity.entity_id for entity in HomeAssistantClient().get_all_entities()}
         if not live_entity_ids:
             raise RegistryPruneError("Fetched zero entities from Home Assistant")
 
-        module_entries = {
+        modules = {
             filepath: cls._parse_module_entries(filepath.read_text())
             for filepath in sorted(cls.registry_dir.glob("*.py"))
             if filepath.name not in cls.non_entity_modules
         }
         registered_ids = [
-            entry["entity_id"] for entries in module_entries.values() for entry in entries
+            EntityId(entry["entity_id"])
+            for module_contents in modules.values()
+            for entry in module_contents
         ]
         stale_ids = set(registered_ids) - live_entity_ids
 
@@ -148,7 +154,7 @@ class RegistryManager:
                 f"entities ({stale_ratio:.0%}). Re-run with force=True to override."
             )
 
-        for filepath, parsed_entries in module_entries.items():
+        for filepath, parsed_entries in modules.items():
             kept_entries = [e for e in parsed_entries if e["entity_id"] not in stale_ids]
             if len(kept_entries) == len(parsed_entries):
                 continue
@@ -171,12 +177,13 @@ class RegistryManager:
             ]
             cls._write_module(filepath, entries, imports)
             log.info(
-                "Pruned stale entities from registry module", filepath=filepath, removed=removed
+                "Pruned stale entities from registry module",
+                filepath=filepath,
+                removed=removed,
             )
 
-        cls.redis_client.delete(
-            *(RedisClient.build_key(CachePrefix.REGISTERED, entity_id) for entity_id in stale_ids)
-        )
+        for entity_id in stale_ids:
+            state_manager.delete_cached_entity(entity_id)
 
         log.info(
             "Registry prune complete",
