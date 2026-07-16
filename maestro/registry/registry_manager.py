@@ -127,7 +127,9 @@ class RegistryManager:
 
         state_manager = StateManager()
 
-        live_entity_ids = {entity.entity_id for entity in HomeAssistantClient().get_all_entities()}
+        live_entity_ids = {
+            entity.entity_id for entity in state_manager.hass_client.get_all_entities()
+        }
         if not live_entity_ids:
             raise RegistryPruneError("Fetched zero entities from Home Assistant")
 
@@ -182,15 +184,14 @@ class RegistryManager:
                 removed=removed,
             )
 
-        for entity_id in stale_ids:
-            state_manager.delete_cached_entity(entity_id)
+        state_manager.delete_cached_entities(*stale_ids)
 
         log.info(
             "Registry prune complete",
             pruned_count=len(stale_ids),
             registered_count=len(registered_ids),
         )
-        return sorted(EntityId(entity_id) for entity_id in stale_ids)
+        return sorted(stale_ids)
 
     @classmethod
     def _parse_module_entries(cls, content: str) -> list[dict[str, Any]]:

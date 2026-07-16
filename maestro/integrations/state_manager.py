@@ -269,14 +269,19 @@ class StateManager:
 
         return EntityData(entity_id=entity_id, state=state, attributes=attributes)
 
-    def delete_cached_entity(self, entity_id: EntityId) -> int:
-        """Remove an entity and its attributes from the cache. Returns the count deleted."""
-        self.redis_client.delete(RedisClient.build_key(CachePrefix.REGISTERED, entity_id))
+    def delete_cached_entities(self, *entity_ids: EntityId) -> int:
+        """
+        Remove entities' states, attributes, and registration markers from the cache.
+        Returns the count of keys deleted.
+        """
+        keys_to_delete: list[str] = []
+        for entity_id in entity_ids:
+            keys_to_delete.append(RedisClient.build_key(CachePrefix.REGISTERED, entity_id))
+            keys_to_delete.extend(self.get_all_entity_keys(entity_id))
+        if not keys_to_delete:
+            return 0
 
-        if keys_to_delete := self.get_all_entity_keys(entity_id):
-            return self.redis_client.delete(*keys_to_delete)
-
-        return 0
+        return self.redis_client.delete(*keys_to_delete)
 
     def fetch_hass_entity(
         self,

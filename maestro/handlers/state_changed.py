@@ -46,7 +46,7 @@ def handle_state_changed(event: WebSocketEvent) -> None:
     if old_raw_data is not None:
         old_data = resolve_entity_state_data(old_raw_data)
         if new_raw_data is None:
-            state_manager.delete_cached_entity(entity_id)
+            state_manager.delete_cached_entities(entity_id)
             log.info("State deletion cached", entity_id=entity_id, old_state=old_data.state)
             return
 
