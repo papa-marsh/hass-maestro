@@ -58,9 +58,11 @@ class EntityId(StateId):
         """Resolve this EntityId to its actual registered Entity subclass instance."""
         import importlib
 
+        from maestro.config import get_config
         from maestro.domains import Entity
 
-        registry_module = importlib.import_module(f"maestro.registry.{self.domain}")
+        registry_package = get_config().registry_dir.name
+        registry_module = importlib.import_module(f"{registry_package}.{self.domain}")
         entity = getattr(registry_module, self.entity, None)
 
         if entity is None:

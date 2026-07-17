@@ -69,11 +69,4 @@ logs/
 .cache
 TODO.txt
 
-maestro/registry/*
-!maestro/registry/README.md
-!maestro/registry/__init__.py
-!maestro/registry/registry_manager.py
-
-scripts/
-
 .opencode/

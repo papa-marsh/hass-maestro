@@ -62,6 +62,20 @@ def configure_logging() -> None:
     root_logger.setLevel(logging.INFO)
 
 
+def import_custom_domains() -> None:
+    """
+    Import the user's custom domains package (if configured) so its Entity subclasses
+    are defined before registry modules and scripts that reference them are loaded.
+    """
+    custom_domains_dir = get_config().custom_domains_dir
+    if custom_domains_dir is None:
+        return
+
+    importlib.invalidate_caches()
+    importlib.import_module(custom_domains_dir.name)
+    log.info("Imported custom domains package", package=custom_domains_dir.name)
+
+
 def load_script_modules(scripts_dir: Path) -> None:
     """
     Auto-discover and import all Python modules in the scripts directory.

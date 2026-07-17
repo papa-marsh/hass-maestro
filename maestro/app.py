@@ -103,6 +103,7 @@ class MaestroApp(Flask):
             self._initialize_db()
 
         self._add_project_paths()
+        internal.import_custom_domains()
         internal.load_script_modules(config.scripts_dir)
 
         if background_services:

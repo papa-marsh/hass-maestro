@@ -3,22 +3,22 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any, ClassVar
 
+from maestro.config import get_config
 from maestro.integrations.home_assistant.client import HomeAssistantClient
 from maestro.integrations.home_assistant.types import EntityData, EntityId
 from maestro.integrations.redis import CachePrefix, RedisClient
 from maestro.utils.dates import IntervalSeconds, local_now, resolve_timestamp
-from maestro.utils.exceptions import RegistryPruneError
+from maestro.utils.exceptions import CustomDomainsNotConfiguredError, RegistryPruneError
 from maestro.utils.logging import log
 
 
 class RegistryManager:
     _redis_client: ClassVar[RedisClient | None] = None
 
-    registry_dir = Path("/maestro/registry")
-    non_entity_modules: ClassVar = {"__init__.py", "registry_manager.py"}
+    non_entity_modules: ClassVar = {"__init__.py"}
     prune_safety_threshold = 0.25
 
-    header = "# THIS MODULE IS PROGRAMMATICALLY UPDATED - See `maestro/registry/README.md`\n\n"
+    header = "# THIS MODULE IS PROGRAMMATICALLY UPDATED BY MAESTRO - DO NOT EDIT ENTITY ENTRIES\n\n"
     attr_import_string = "from maestro.domains.entity import EntityAttribute"
     datetime_import_string = "from datetime import datetime"
     attributes_to_ignore: ClassVar = {
@@ -37,10 +37,17 @@ class RegistryManager:
         return cls._redis_client
 
     @classmethod
+    def registry_dir(cls) -> Path:
+        """The user project directory that generated registry modules are written to"""
+        registry_dir = get_config().registry_dir.resolve()
+        registry_dir.mkdir(parents=True, exist_ok=True)
+        return registry_dir
+
+    @classmethod
     def upsert_entity(cls, entity_data: EntityData, force: bool = False) -> None:
         """Adds or updates an entity to its respective module: maestro/registry/<domain>.py"""
         entity_id = EntityId(entity_data.entity_id)
-        module_filepath = cls.registry_dir / f"{entity_id.domain}.py"
+        module_filepath = cls.registry_dir() / f"{entity_id.domain}.py"
         cache_key = RedisClient.build_key(CachePrefix.REGISTERED, entity_id)
 
         if not force and (cached_value := cls.redis_client().get(key=cache_key)):
@@ -66,7 +73,7 @@ class RegistryManager:
     @classmethod
     def write_new_module(cls, entity_data: EntityData) -> None:
         entity_id = EntityId(entity_data.entity_id)
-        module_filepath = cls.registry_dir / f"{entity_id.domain}.py"
+        module_filepath = cls.registry_dir() / f"{entity_id.domain}.py"
 
         new_entry = cls._build_entry(
             entity_id=entity_id,
@@ -74,17 +81,13 @@ class RegistryManager:
             parent_class=entity_id.domain_class_name,
             type_as_value=False,
         )
-        content = (
-            f"{cls.header}from maestro.domains import {entity_id.domain_class_name}\n"
-            f"{cls.attr_import_string}\n{cls.datetime_import_string}\n\n{new_entry}"
-        )
-        module_filepath.write_text(content)
+        cls._write_module(module_filepath, [new_entry], {entity_id.domain_class_name})
         log.info("Created new registry file", filepath=module_filepath, entity=entity_id)
 
     @classmethod
     def update_existing_module(cls, entity_data: EntityData) -> None:
         entity_id = EntityId(entity_data.entity_id)
-        module_filepath = cls.registry_dir / f"{entity_id.domain}.py"
+        module_filepath = cls.registry_dir() / f"{entity_id.domain}.py"
 
         new_entry_parent_class = entity_id.domain_class_name
 
@@ -142,7 +145,7 @@ class RegistryManager:
 
         modules = {
             filepath: cls._parse_module_entries(filepath.read_text())
-            for filepath in sorted(cls.registry_dir.glob("*.py"))
+            for filepath in sorted(cls.registry_dir().glob("*.py"))
             if filepath.name not in cls.non_entity_modules
         }
         registered_ids = [
@@ -219,17 +222,44 @@ class RegistryManager:
 
     @classmethod
     def _write_module(cls, module_filepath: Path, entries: list[str], imports: set[str]) -> None:
-        mypy_ignore = "  # type:ignore[attr-defined, unused-ignore]"
-        import_string = "from maestro.domains import " + ", ".join(sorted(imports)) + mypy_ignore
-
         lines = [
             cls.header,
-            import_string,
+            *cls._build_import_strings(imports),
             cls.attr_import_string,
             cls.datetime_import_string,
             *sorted(entries),
         ]
         module_filepath.write_text("\n".join(lines) + "\n")
+
+    @classmethod
+    def _build_import_strings(cls, imports: set[str]) -> list[str]:
+        """
+        Split parent class imports between maestro's built-in domains and the user's
+        custom domains package, based on where each class is actually defined.
+        """
+        import maestro.domains
+
+        builtin_parents = {name for name in imports if hasattr(maestro.domains, name)}
+        custom_parents = imports - builtin_parents
+
+        import_strings = []
+        if builtin_parents:
+            import_strings.append(
+                "from maestro.domains import " + ", ".join(sorted(builtin_parents))
+            )
+        if custom_parents:
+            custom_domains_dir = get_config().custom_domains_dir
+            if custom_domains_dir is None:
+                raise CustomDomainsNotConfiguredError(
+                    f"Registry entries inherit from custom domain classes "
+                    f"({', '.join(sorted(custom_parents))}) but `custom_domains_dir` "
+                    f"is not configured"
+                )
+            import_strings.append(
+                f"from {custom_domains_dir.name} import " + ", ".join(sorted(custom_parents))
+            )
+
+        return import_strings
 
     @classmethod
     def _build_entry(
