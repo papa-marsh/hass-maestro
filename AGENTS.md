@@ -1,6 +1,6 @@
 # Maestro (hass-maestro)
 
-Strongly-typed Python automation framework for Home Assistant, packaged as an installable library (PyPI name `hass-maestro`, import name `maestro`). Flask + SQLAlchemy + Redis + APScheduler + structlog. Python 3.14+. Users install the package, write a small `app.py` that constructs `MaestroApp`, and keep their automations, entity registry, and custom domains in their own project. The reference consumer is [maestro-scripts](https://github.com/papa-marsh/maestro-scripts).
+Strongly-typed Python automation framework for Home Assistant, packaged as an installable library (PyPI name `hass-maestro`, import name `maestro`). Flask + SQLAlchemy + Redis + APScheduler + structlog. Python 3.14+. Users install the package, write a small `app.py` that constructs `MaestroApp`, and keep their automations, entity registry, and custom domains in their own project. The reference consumer is [maestro](https://github.com/papa-marsh/maestro).
 
 ## Project Structure
 
