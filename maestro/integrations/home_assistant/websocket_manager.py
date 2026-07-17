@@ -138,7 +138,9 @@ class WebSocketManager:
 
     def _handle_event(self, raw_event: dict[str, Any]) -> None:
         """Route incoming WebSocket events to appropriate handlers"""
-        from maestro.app import app
+        from maestro.app import get_app
+
+        app = get_app()
 
         event_type_name = (
             EventTypeName.HASS_STARTUP

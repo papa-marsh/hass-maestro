@@ -58,8 +58,9 @@ def cron_trigger(
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            from maestro.app import app
+            from maestro.app import get_app
 
+            app = get_app()
             process_id = build_process_id(CronTriggerManager.trigger_type)
             set_process_id(process_id)
 

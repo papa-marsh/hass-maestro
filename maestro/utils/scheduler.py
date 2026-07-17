@@ -24,9 +24,9 @@ class JobScheduler:
 
             self.apscheduler = get_test_job_scheduler()
         else:
-            from maestro.app import app
+            from maestro.app import get_app
 
-            self.apscheduler = apscheduler or app.scheduler
+            self.apscheduler = apscheduler or get_app().scheduler
 
         if not test_mode_active() and not isinstance(self.apscheduler, BackgroundScheduler):
             raise SchedulerMisconfiguredError

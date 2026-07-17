@@ -5,7 +5,6 @@ Not intended to be used by script modules
 
 import importlib
 import logging
-import os
 import sys
 from collections.abc import Mapping, MutableMapping
 from datetime import datetime
@@ -21,13 +20,6 @@ from maestro.utils.logging import log
 
 def test_mode_active() -> bool:
     return "pytest" in sys.modules
-
-
-def shell_mode_active() -> bool:
-    if os.environ.get("FLASK_RUN_FROM_CLI") == "true":
-        return "shell" in sys.argv
-
-    return hasattr(sys, "ps1") or bool(sys.flags.interactive)
 
 
 def add_timezone_timestamp(
@@ -70,32 +62,31 @@ def configure_logging() -> None:
     root_logger.setLevel(logging.INFO)
 
 
-def load_script_modules() -> None:
+def load_script_modules(scripts_dir: Path) -> None:
     """
     Auto-discover and import all Python modules in the scripts directory.
     This ensures that trigger decorators (eg. @state_change_trigger) and DB models get registered.
+
+    Modules are imported as a package named after the directory (eg. `scripts.family.ellie`),
+    which requires the project root to already be on `sys.path`.
     """
-    scripts_dir = Path("/code/scripts")
+    scripts_dir = scripts_dir.resolve()
     if not scripts_dir.exists():
-        scripts_dir = Path.cwd() / "scripts"
-    if not scripts_dir.exists():
-        raise MissingScriptsDirectoryError("Failed to find scripts directory while loading modules")
+        raise MissingScriptsDirectoryError(f"Scripts directory not found: {scripts_dir}")
 
-    scripts_path = str(scripts_dir)
-    if scripts_path not in sys.path:
-        sys.path.insert(0, scripts_path)
-        log.info("Added scripts directory to Python path", path=scripts_path)
+    # The path finder caches directory listings; project dirs may be newer than the cache
+    importlib.invalidate_caches()
 
-    python_files = list(scripts_dir.rglob("*.py"))
+    package_name = scripts_dir.name
     loaded_count = 0
     error_count = 0
 
-    for python_file in python_files:
+    for python_file in sorted(scripts_dir.rglob("*.py")):
         if python_file.name.startswith("_") or python_file.name.startswith("test"):
             continue
 
         relative_path = python_file.relative_to(scripts_dir)
-        module_name = str(relative_path.with_suffix("")).replace("/", ".").replace("\\", ".")
+        module_name = f"{package_name}.{'.'.join(relative_path.with_suffix('').parts)}"
 
         try:
             log.info("Loading scripts module", module=module_name)

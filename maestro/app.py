@@ -1,54 +1,138 @@
 import atexit
 import json
-import os
-from typing import Any
+import sys
+from collections.abc import Mapping, Sequence
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from apscheduler.executors.pool import ThreadPoolExecutor  # type:ignore[import-untyped]
 from apscheduler.jobstores.redis import RedisJobStore  # type:ignore[import-untyped]
 from apscheduler.schedulers.background import BackgroundScheduler  # type:ignore[import-untyped]
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 
 from maestro.config import MaestroConfig, get_config, register_config
 from maestro.integrations.home_assistant.websocket_manager import WebSocketManager
 from maestro.triggers.cron import CronTriggerManager
 from maestro.triggers.maestro import MaestroEvent, MaestroTriggerManager
 from maestro.triggers.sun import SunTriggerManager
-from maestro.utils.internal import (
-    configure_logging,
-    load_script_modules,
-    shell_mode_active,
-    test_mode_active,
+from maestro.utils import internal
+from maestro.utils.exceptions import (
+    MaestroAlreadyConstructedError,
+    MaestroNotConstructedError,
 )
 from maestro.utils.logging import build_process_id, log, set_process_id
 
+_app: MaestroApp | None = None
 
-class MaestroFlask(Flask):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        process_id = build_process_id("startup")
-        set_process_id(process_id)
-        self._initialize_db()
 
-        if test_mode_active():
-            self._initialize_test_environment()
-            return
+def get_app() -> MaestroApp:
+    """Return the current MaestroApp, available once constructed"""
+    if _app is None:
+        raise MaestroNotConstructedError("MaestroApp has not been constructed")
+    return _app
 
-        if shell_mode_active():
-            self._initialize_shell_environment()
-            return
 
-        load_script_modules()
-        self._initialize_scheduler()
-        self._initialize_websocket()
-        with self.app_context():
-            MaestroTriggerManager.fire_triggers(MaestroEvent.STARTUP)
-        atexit.register(self._shutdown_handler)
+class MaestroApp(Flask):
+    """
+    The Maestro application. Constructing one initializes the full framework:
+    configuration, logging, optional database, user script loading, and (unless
+    disabled) the background scheduler and Home Assistant websocket connection.
+
+    Directly servable by any WSGI server since it subclasses Flask.
+    """
+
+    scheduler: BackgroundScheduler
+    websocket_manager: WebSocketManager
+
+    def __init__(
+        self,
+        *,
+        hass_url: str,
+        hass_token: str,
+        redis_host: str,
+        redis_port: int,
+        db_url: str | None = None,
+        scripts_dir: Path | str = Path("scripts"),
+        registry_dir: Path | str = Path("registry"),
+        custom_domains_dir: Path | str | None = None,
+        redis_key_prefix: str = "maestro",
+        timezone: str = "America/New_York",
+        background_services: bool = True,
+        configure_logging: bool = True,
+        autopopulate_registry: bool = False,
+        domain_ignore_list: Sequence[str] = (),
+        notify_action_mappings: Mapping[str, str] | None = None,
+        default_notif_sound: str = "3rdParty_Failure_Haptic.caf",
+        critical_notif_sound: str = "3rd_party_critical.caf",
+        default_notif_url: str = "overview",
+    ) -> None:
+        global _app
+        if _app is not None:
+            raise MaestroAlreadyConstructedError(
+                "Only one MaestroApp may be constructed per process"
+            )
+
+        super().__init__("maestro")
+
+        config = MaestroConfig(
+            hass_url=hass_url,
+            hass_token=hass_token,
+            redis_host=redis_host,
+            redis_port=redis_port,
+            db_url=db_url,
+            scripts_dir=Path(scripts_dir),
+            registry_dir=Path(registry_dir),
+            custom_domains_dir=Path(custom_domains_dir) if custom_domains_dir else None,
+            redis_key_prefix=redis_key_prefix,
+            timezone=ZoneInfo(timezone),
+            autopopulate_registry=autopopulate_registry,
+            domain_ignore_list=tuple(domain_ignore_list),
+            notify_action_mappings=dict(notify_action_mappings or {}),
+            default_notif_sound=default_notif_sound,
+            critical_notif_sound=critical_notif_sound,
+            default_notif_url=default_notif_url,
+        )
+        register_config(config)
+        _app = self
+
+        set_process_id(build_process_id("startup"))
+        if configure_logging:
+            internal.configure_logging()
+
+        if config.db_url is not None:
+            self._initialize_db()
+
+        self._add_project_paths()
+        internal.load_script_modules(config.scripts_dir)
+
+        if background_services:
+            self._initialize_scheduler()
+            self._initialize_websocket()
+            with self.app_context():
+                MaestroTriggerManager.fire_triggers(MaestroEvent.STARTUP)
+            atexit.register(self._shutdown_handler)
+        else:
+            # Idle in-memory scheduler so job scheduling code paths stay usable (eg. in a REPL)
+            self.scheduler = BackgroundScheduler(timezone=config.timezone)
 
         log.info("Maestro app fully initialized")
 
+    def _add_project_paths(self) -> None:
+        """Make the user's project packages (scripts, registry, custom domains) importable"""
+        config = get_config()
+        project_dirs = [config.scripts_dir, config.registry_dir]
+        if config.custom_domains_dir is not None:
+            project_dirs.append(config.custom_domains_dir)
+
+        for project_dir in project_dirs:
+            parent = str(project_dir.resolve().parent)
+            if parent not in sys.path:
+                sys.path.insert(0, parent)
+                log.info("Added project path to sys.path", path=parent)
+
     def _initialize_db(self) -> None:
+        from maestro import db
+
         log.info("Initializing database connection")
         self.config["SQLALCHEMY_DATABASE_URI"] = get_config().db_url
         self.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -81,78 +165,3 @@ class MaestroFlask(Flask):
         self.websocket_manager.set_last_connected()
         with self.app_context():
             MaestroTriggerManager.fire_triggers(MaestroEvent.SHUTDOWN, self)
-
-    def _initialize_test_environment(self) -> None:
-        """Initialize in-memory scheduler for registering decorators while testing."""
-        log.info("Initializing test environment")
-        self.scheduler = BackgroundScheduler(timezone=get_config().timezone)
-        log.info("Test environment initialized")
-
-    def _initialize_shell_environment(self) -> None:
-        """Initialize Flask shell environment with scripts loaded but no background services"""
-        log.info("Initializing shell environment")
-        load_script_modules()
-        self.scheduler = BackgroundScheduler(timezone=get_config().timezone)
-        log.info("Shell environment initialized - background services disabled")
-
-
-def _config_from_env() -> MaestroConfig:
-    """Transitional env-var bridge until MaestroApp accepts constructor kwargs"""
-    return MaestroConfig(
-        hass_url=os.environ.get("HOME_ASSISTANT_URL", ""),
-        hass_token=os.environ.get("HOME_ASSISTANT_TOKEN", ""),
-        redis_host=os.environ.get("REDIS_HOST", ""),
-        redis_port=int(os.environ.get("REDIS_PORT", "0")),
-        db_url=os.environ.get("DATABASE_URL", ""),
-        timezone=ZoneInfo(os.environ.get("TIMEZONE", "America/New_York")),
-        autopopulate_registry=os.environ.get("AUTOPOPULATE_REGISTRY", "").lower() in ["true", "1"],
-        domain_ignore_list=tuple(os.environ.get("DOMAIN_IGNORE_LIST", "").split(",")),
-        notify_action_mappings={
-            notify_mapping.split(":")[0]: notify_mapping.split(":")[1]
-            for notify_mapping in os.environ.get("NOTIFY_ACTION_MAPPINGS", "").split(",")
-            if ":" in notify_mapping
-        },
-    )
-
-
-register_config(_config_from_env())
-configure_logging()
-
-
-db = SQLAlchemy()
-app = MaestroFlask(__name__)
-
-
-@app.shell_context_processor
-def make_shell_context() -> dict:
-    """Pre-load common imports for flask shell command"""
-    from maestro.integrations.home_assistant.client import HomeAssistantClient
-    from maestro.integrations.home_assistant.types import (
-        AttributeId,
-        EntityData,
-        EntityId,
-        StateChangeEvent,
-        StateId,
-    )
-    from maestro.integrations.redis import RedisClient
-    from maestro.integrations.state_manager import StateManager
-    from maestro.registry.registry_manager import RegistryManager
-    from maestro.triggers.sun import SolarEvent
-    from maestro.triggers.trigger_manager import TriggerManager
-    from maestro.utils import (
-        IntervalSeconds,
-        JobScheduler,
-        Notif,
-        local_now,
-        resolve_timestamp,
-    )
-
-    hass = HomeAssistantClient()
-    redis = RedisClient()
-    sm = StateManager(hass_client=hass, redis_client=redis)
-    rm = RegistryManager()
-    triggers = TriggerManager.get_registry()
-
-    print("Pre-loaded variables: hass, redis, sm, rm, triggers")  # noqa: T201
-
-    return locals()

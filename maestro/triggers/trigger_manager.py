@@ -3,17 +3,15 @@ from collections import defaultdict
 from collections.abc import Callable
 from inspect import signature
 from threading import Thread
-from typing import TYPE_CHECKING, Any, ClassVar, final
+from typing import Any, ClassVar, final
 
 from apscheduler.triggers.cron import CronTrigger  # type:ignore[import-untyped]
+from flask import Flask
 
+from maestro.config import get_config
 from maestro.triggers.types import TriggerFuncParamsT, TriggerRegistryEntry, TriggerType
 from maestro.utils.internal import test_mode_active
 from maestro.utils.logging import get_process_id, log, set_process_id
-
-if TYPE_CHECKING:
-    from maestro.app import MaestroFlask
-
 
 RegistryT = dict[TriggerType, defaultdict[str, list[TriggerRegistryEntry]]]
 
@@ -73,7 +71,7 @@ class TriggerManager(ABC):
     def _get_qual_name(func: Callable) -> str:
         """Build the normalized, fully qualified name for a function"""
         module = func.__module__
-        normalized_module = module.removeprefix("scripts.")
+        normalized_module = module.removeprefix(f"{get_config().scripts_dir.name}.")
         return f"{normalized_module}.{func.__qualname__}"
 
     @classmethod
@@ -92,7 +90,7 @@ class TriggerManager(ABC):
         """Execute a list of trigger functions in background threads."""
         from flask import current_app
 
-        app: MaestroFlask = current_app._get_current_object()  # type:ignore[attr-defined]
+        app: Flask = current_app._get_current_object()  # type:ignore[attr-defined]
 
         if test_mode_active():
             cls.invoke_funcs_sync(funcs_to_execute, func_params, app)
@@ -121,7 +119,7 @@ class TriggerManager(ABC):
         cls,
         funcs_to_execute: list[Callable],
         func_params: TriggerFuncParamsT,
-        app: MaestroFlask,
+        app: Flask,
     ) -> None:
         """Execute a list of trigger functions synchronously (blocking)."""
         func_params_dict = dict(func_params)
@@ -140,7 +138,7 @@ class TriggerManager(ABC):
         cls,
         func: Callable,
         func_params_dict: dict[str, Any],
-        app: MaestroFlask,
+        app: Flask,
         process_id: str | None = None,
     ) -> None:
         """

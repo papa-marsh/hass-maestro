@@ -3,7 +3,7 @@ from collections.abc import Generator
 import pytest
 from flask import Flask
 
-from maestro.app import db
+from maestro import db
 from maestro.config import MaestroConfig, register_config
 from maestro.testing.context import reset_test_context
 from maestro.testing.maestro_test import MaestroTest

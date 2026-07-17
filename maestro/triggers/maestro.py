@@ -1,7 +1,9 @@
 from collections.abc import Callable
 from enum import StrEnum, auto
 from functools import wraps
-from typing import TYPE_CHECKING, Any
+from typing import Any
+
+from flask import Flask
 
 from maestro.triggers.trigger_manager import TriggerManager
 from maestro.triggers.types import (
@@ -9,9 +11,6 @@ from maestro.triggers.types import (
     TriggerRegistryEntry,
     TriggerType,
 )
-
-if TYPE_CHECKING:
-    from maestro.app import MaestroFlask
 
 
 class MaestroEvent(StrEnum):
@@ -23,7 +22,7 @@ class MaestroTriggerManager(TriggerManager):
     trigger_type = TriggerType.MAESTRO
 
     @classmethod
-    def fire_triggers(cls, event: MaestroEvent, app: MaestroFlask | None = None) -> None:
+    def fire_triggers(cls, event: MaestroEvent, app: Flask | None = None) -> None:
         """Execute registered Maestro event (eg. startup or shutdown) functions."""
         func_params = MaestroParams.FuncParams()
         registry = cls.get_registry(registry_union=True)
