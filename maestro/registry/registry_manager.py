@@ -8,7 +8,11 @@ from maestro.integrations.home_assistant.client import HomeAssistantClient
 from maestro.integrations.home_assistant.types import EntityData, EntityId
 from maestro.integrations.redis import CachePrefix, RedisClient
 from maestro.utils.dates import IntervalSeconds, local_now, resolve_timestamp
-from maestro.utils.exceptions import CustomDomainsNotConfiguredError, RegistryPruneError
+from maestro.utils.exceptions import (
+    CustomDomainsNotConfiguredError,
+    MalformedRegistryModule,
+    RegistryPruneError,
+)
 from maestro.utils.logging import log
 
 
@@ -205,7 +209,14 @@ class RegistryManager:
 
     @classmethod
     def _parse_module_entries(cls, content: str) -> list[dict[str, Any]]:
-        """Parse a registry module into dicts of entity_id, parent_class, and attribute types"""
+        """
+        Parse a registry module into dicts of entity_id, parent_class, and attribute types.
+
+        Parsing is line-format-sensitive. If the module contains instantiations the parser
+        can't account for (eg. statements re-wrapped by a code formatter), raise rather than
+        return a partial result -- callers rewrite modules from parsed entries, so a silent
+        partial parse would destroy the unparsed entries.
+        """
         entries: list[dict[str, Any]] = []
         current: dict[str, Any] = {}
         for line in content.strip().split("\n"):
@@ -217,6 +228,14 @@ class RegistryManager:
                 current["entity_id"] = match.group(1)
                 entries.append(current)
                 current = {}
+
+        instantiation_count = len(re.findall(r"^\w+\s*=\s*\w+\(", content, re.MULTILINE))
+        if len(entries) != instantiation_count:
+            raise MalformedRegistryModule(
+                f"Parsed {len(entries)} entries but found {instantiation_count} module-level "
+                f"instantiations. The module's formatting has likely been altered; restore the "
+                f"generated line format before maestro rewrites this module."
+            )
 
         return entries
 

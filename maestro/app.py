@@ -16,10 +16,7 @@ from maestro.triggers.cron import CronTriggerManager
 from maestro.triggers.maestro import MaestroEvent, MaestroTriggerManager
 from maestro.triggers.sun import SunTriggerManager
 from maestro.utils import internal
-from maestro.utils.exceptions import (
-    MaestroAlreadyConstructedError,
-    MaestroNotConstructedError,
-)
+from maestro.utils.exceptions import MaestroAlreadyConstructedError, MaestroNotConstructedError
 from maestro.utils.logging import build_process_id, log, set_process_id
 
 _app: MaestroApp | None = None
@@ -68,9 +65,7 @@ class MaestroApp(Flask):
     ) -> None:
         global _app
         if _app is not None:
-            raise MaestroAlreadyConstructedError(
-                "Only one MaestroApp may be constructed per process"
-            )
+            raise MaestroAlreadyConstructedError("Only one MaestroApp allowed per process")
 
         super().__init__("maestro")
 

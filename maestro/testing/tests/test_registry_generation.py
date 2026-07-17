@@ -12,7 +12,7 @@ from maestro.config import MaestroConfig, register_config
 from maestro.integrations.home_assistant.types import EntityData, EntityId
 from maestro.registry.registry_manager import RegistryManager
 from maestro.testing.maestro_test import MaestroTest
-from maestro.utils.exceptions import CustomDomainsNotConfiguredError
+from maestro.utils.exceptions import CustomDomainsNotConfiguredError, MalformedRegistryModule
 
 
 @pytest.fixture
@@ -92,6 +92,28 @@ def test_mixed_parents_generate_dual_imports(mt: MaestroTest, registry_dir: Path
     assert "from custom_domains import Thermostat" in content
     assert "class ClimateUpstairs(Thermostat):" in content
     assert "class ClimateDownstairs(Climate):" in content
+
+
+def test_reformatted_module_raises_instead_of_dropping_entries(
+    mt: MaestroTest, registry_dir: Path
+) -> None:
+    """Test that rewriting a module with formatter-wrapped statements fails loudly"""
+    long_name = "sensor.a_very_long_entity_name_that_would_exceed_the_line_length_limit"
+    entity_data = EntityData(entity_id=EntityId(long_name), state="1", attributes={})
+    RegistryManager.write_new_module(entity_data)
+
+    # Simulate a code formatter wrapping the instantiation across multiple lines
+    module_filepath = registry_dir / "sensor.py"
+    content = module_filepath.read_text()
+    class_name = "SensorAVeryLongEntityNameThatWouldExceedTheLineLengthLimit"
+    content = content.replace(
+        f'a_very_long_entity_name_that_would_exceed_the_line_length_limit = {class_name}("{long_name}")',
+        f'a_very_long_entity_name_that_would_exceed_the_line_length_limit = {class_name}(\n    "{long_name}"\n)',
+    )
+    module_filepath.write_text(content)
+
+    with pytest.raises(MalformedRegistryModule):
+        RegistryManager.update_existing_module(entity_data)
 
 
 def test_custom_parent_without_custom_domains_dir_raises(mt: MaestroTest, tmp_path: Path) -> None:
