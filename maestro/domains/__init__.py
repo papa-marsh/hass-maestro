@@ -17,6 +17,7 @@ from .light import Light
 from .lock import Lock
 from .maestro import Maestro
 from .media_player import MediaPlayer
+from .notify import Notify
 from .number import Number
 from .person import Person
 from .select import Select
@@ -54,6 +55,7 @@ __all__ = [
     Lock.__name__,
     Maestro.__name__,
     MediaPlayer.__name__,
+    Notify.__name__,
     Number.__name__,
     Person.__name__,
     Select.__name__,

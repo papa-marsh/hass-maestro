@@ -10,6 +10,7 @@ from apscheduler.triggers.cron import CronTrigger  # type:ignore[import-untyped]
 from maestro.config import get_config
 from maestro.triggers.trigger_manager import TriggerManager
 from maestro.triggers.types import CronParams, TriggerRegistryEntry, TriggerType
+from maestro.utils.internal import test_mode_active
 from maestro.utils.logging import build_process_id, log, set_process_id
 
 SCHEDULER_JOB_PREFIX = "cron_trigger_job_"
@@ -59,6 +60,9 @@ def cron_trigger(
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             from maestro.app import get_app
+
+            if test_mode_active():
+                return func(*args, **kwargs)
 
             app = get_app()
             process_id = build_process_id(CronTriggerManager.trigger_type)
