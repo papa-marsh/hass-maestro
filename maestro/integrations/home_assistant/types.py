@@ -27,8 +27,6 @@ class StateId(str):
         return str.__new__(cls, value)
 
     def __init__(self, _: str):
-        from maestro.integrations.redis import CachePrefix, RedisClient
-
         super().__init__()
         parts = self.split(".")
 
@@ -40,7 +38,16 @@ class StateId(str):
         self.is_attribute = self.attribute is not None
 
         self.domain_class_name = "".join(word.capitalize() for word in self.domain.split("_"))
-        self.cache_key = RedisClient.build_key(CachePrefix.STATE, *parts)
+
+    @property
+    def cache_key(self) -> str:
+        """The namespaced Redis key for this ID's cached state.
+
+        Computed lazily so IDs can be constructed (eg. at import time) before config exists.
+        """
+        from maestro.integrations.redis import CachePrefix, RedisClient
+
+        return RedisClient.build_key(CachePrefix.STATE, *self.split("."))
 
 
 class EntityId(StateId):

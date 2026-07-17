@@ -260,11 +260,11 @@ class StateManager:
             raise TypeError
 
         for key in self.get_all_entity_keys(entity_id):
-            parts = key.split(":")
-            if len(parts) == 3:
+            if key == entity_id.cache_key:
                 continue
 
-            attribute_id = AttributeId(".".join(parts[1:]))
+            attribute_name = key.removeprefix(f"{entity_id.cache_key}:")
+            attribute_id = AttributeId(f"{entity_id}.{attribute_name}")
             attributes[attribute_id.attribute] = self.get_cached_state(attribute_id)
 
         return EntityData(entity_id=entity_id, state=state, attributes=attributes)
@@ -306,7 +306,8 @@ class StateManager:
         cached_count = 0
 
         if force_registry_update:
-            keys_to_delete = self.redis_client.get_keys(pattern=f"{CachePrefix.REGISTERED}*")
+            registered_pattern = f"{RedisClient.build_key(CachePrefix.REGISTERED)}*"
+            keys_to_delete = self.redis_client.get_keys(pattern=registered_pattern)
             self.redis_client.delete(*keys_to_delete)
 
         for entity_data in all_entities:

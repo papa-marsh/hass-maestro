@@ -126,8 +126,8 @@ class RedisClient:
 
     @classmethod
     def build_key(cls, *parts: str) -> str:
-        """Builds a redis key from provided args"""
-        return ":".join(parts)
+        """Builds a redis key from provided args, namespaced under the configured prefix"""
+        return ":".join([get_config().redis_key_prefix, *parts])
 
     @classmethod
     def encode_cached_state(cls, value: CachedValueT) -> str:

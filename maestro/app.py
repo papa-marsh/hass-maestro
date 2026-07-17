@@ -144,7 +144,14 @@ class MaestroApp(Flask):
         log.info("Initializing job scheduler")
         config = get_config()
         self.scheduler = BackgroundScheduler(
-            jobstores={"default": RedisJobStore(host=config.redis_host, port=config.redis_port)},
+            jobstores={
+                "default": RedisJobStore(
+                    host=config.redis_host,
+                    port=config.redis_port,
+                    jobs_key=f"{config.redis_key_prefix}:apscheduler.jobs",
+                    run_times_key=f"{config.redis_key_prefix}:apscheduler.run_times",
+                )
+            },
             executors={"default": ThreadPoolExecutor(max_workers=100)},
             timezone=config.timezone,
         )
