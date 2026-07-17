@@ -1,24 +1,54 @@
-import os
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
-HOME_ASSISTANT_URL = os.environ.get("HOME_ASSISTANT_URL", "").rstrip("/")
-HOME_ASSISTANT_TOKEN = os.environ.get("HOME_ASSISTANT_TOKEN", "")
 
-REDIS_HOST = os.environ.get("REDIS_HOST", "")
-REDIS_PORT = int(os.environ.get("REDIS_PORT", "0"))
+@dataclass(frozen=True)
+class MaestroConfig:
+    """
+    Runtime configuration for the framework, registered during `MaestroApp` construction.
+    Internal plumbing for constructor kwargs -- read via `get_config()` at call time.
+    """
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
-SQLALCHEMY_TRACK_MODIFICATIONS = False
+    hass_url: str
+    hass_token: str
+    redis_host: str
+    redis_port: int
+    db_url: str | None = None
+    scripts_dir: Path = Path("scripts")
+    registry_dir: Path = Path("registry")
+    custom_domains_dir: Path | None = None
+    redis_key_prefix: str = "maestro"
+    timezone: ZoneInfo = field(default_factory=lambda: ZoneInfo("America/New_York"))
+    autopopulate_registry: bool = False
+    domain_ignore_list: tuple[str, ...] = ()
+    notify_action_mappings: Mapping[str, str] = field(default_factory=dict)
+    default_notif_sound: str = "3rdParty_Failure_Haptic.caf"
+    critical_notif_sound: str = "3rd_party_critical.caf"
+    default_notif_url: str = "overview"
 
-TIMEZONE = ZoneInfo(os.environ.get("TIMEZONE", "America/New_York"))
-AUTOPOPULATE_REGISTRY = os.environ.get("AUTOPOPULATE_REGISTRY") in [True, "True", "true", 1, "1"]
-DOMAIN_IGNORE_LIST = os.environ.get("DOMAIN_IGNORE_LIST", "").split(",")
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "hass_url", self.hass_url.rstrip("/"))
 
-NOTIFY_ACTION_MAPPINGS = {
-    notify_mapping.split(":")[0]: notify_mapping.split(":")[1]
-    for notify_mapping in os.environ.get("NOTIFY_ACTION_MAPPINGS", "").split(",")
-    if ":" in notify_mapping
-}
-DEFAULT_NOTIF_SOUND = os.environ.get("DEFAULT_NOTIF_SOUND", "3rdParty_Failure_Haptic.caf")
-CRITICAL_NOTIF_SOUND = os.environ.get("CRITICAL_NOTIF_SOUND", "3rd_party_critical.caf")
-DEFAULT_NOTIF_URL = os.environ.get("DEFAULT_NOTIF_URL", "overview")
+
+_config: MaestroConfig | None = None
+
+
+def register_config(config: MaestroConfig) -> None:
+    """Register the active config. Called during `MaestroApp` construction."""
+    global _config
+    _config = config
+
+
+def get_config() -> MaestroConfig:
+    """Return the active config"""
+    if _config is None:
+        # Imported lazily: `maestro.utils` pulls in modules that read config at call time
+        from maestro.utils.exceptions import MaestroNotConstructedError
+
+        raise MaestroNotConstructedError(
+            "MaestroApp has not been constructed. "
+            "Configuration is available only after `MaestroApp(...)` has been created."
+        )
+    return _config

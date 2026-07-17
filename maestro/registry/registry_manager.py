@@ -12,7 +12,7 @@ from maestro.utils.logging import log
 
 
 class RegistryManager:
-    redis_client = RedisClient()
+    _redis_client: ClassVar[RedisClient | None] = None
 
     registry_dir = Path("/maestro/registry")
     non_entity_modules: ClassVar = {"__init__.py", "registry_manager.py"}
@@ -30,13 +30,20 @@ class RegistryManager:
     }
 
     @classmethod
+    def redis_client(cls) -> RedisClient:
+        """Lazily construct the shared Redis client, deferring config reads to first use"""
+        if cls._redis_client is None:
+            cls._redis_client = RedisClient()
+        return cls._redis_client
+
+    @classmethod
     def upsert_entity(cls, entity_data: EntityData, force: bool = False) -> None:
         """Adds or updates an entity to its respective module: maestro/registry/<domain>.py"""
         entity_id = EntityId(entity_data.entity_id)
         module_filepath = cls.registry_dir / f"{entity_id.domain}.py"
         cache_key = RedisClient.build_key(CachePrefix.REGISTERED, entity_id)
 
-        if not force and (cached_value := cls.redis_client.get(key=cache_key)):
+        if not force and (cached_value := cls.redis_client().get(key=cache_key)):
             last_updated = resolve_timestamp(cached_value)
             if last_updated > local_now() - timedelta(seconds=IntervalSeconds.ONE_DAY):
                 return
@@ -47,7 +54,7 @@ class RegistryManager:
             else:
                 cls.update_existing_module(entity_data)
 
-            cls.redis_client.set(
+            cls.redis_client().set(
                 key=cache_key,
                 value=local_now().isoformat(),
                 ttl_seconds=IntervalSeconds.ONE_WEEK,

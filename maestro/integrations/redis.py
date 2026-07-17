@@ -8,7 +8,7 @@ from enum import IntEnum, StrEnum
 import redis
 from redis.lock import Lock
 
-from maestro.config import REDIS_HOST, REDIS_PORT
+from maestro.config import get_config
 from maestro.utils.dates import IntervalSeconds, resolve_timestamp
 
 
@@ -51,9 +51,10 @@ class RedisClient:
     """Client for interacting with Redis"""
 
     def __init__(self) -> None:
+        config = get_config()
         self.client = redis.Redis(
-            host=REDIS_HOST,
-            port=REDIS_PORT,
+            host=config.redis_host,
+            port=config.redis_port,
             decode_responses=True,
             socket_connect_timeout=5,
             socket_timeout=5,

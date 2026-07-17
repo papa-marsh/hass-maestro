@@ -2,7 +2,7 @@ from enum import StrEnum, auto
 from typing import TYPE_CHECKING, NotRequired, TypedDict
 from uuid import uuid4
 
-from maestro.config import DEFAULT_NOTIF_SOUND, DEFAULT_NOTIF_URL
+from maestro.config import get_config
 from maestro.integrations.home_assistant.domain import Domain
 from maestro.utils.exceptions import NotifActionMappingError
 from maestro.utils.logging import log
@@ -10,6 +10,13 @@ from maestro.utils.logging import log
 if TYPE_CHECKING:
     from maestro.domains.person import Person
     from maestro.integrations.home_assistant.types import NotifActionDataT
+
+
+class _UnsetType:
+    """Sentinel for parameters whose defaults come from config at call time"""
+
+
+_UNSET = _UnsetType()
 
 
 class Notif:
@@ -49,11 +56,15 @@ class Notif:
         priority: Priority = Priority.ACTIVE,
         group: str | None = None,
         tag: str | None = None,
-        sound: str | None = DEFAULT_NOTIF_SOUND,
-        url: str = DEFAULT_NOTIF_URL,
+        sound: str | None | _UnsetType = _UNSET,
+        url: str | _UnsetType = _UNSET,
         actions: list[Action] = [],
         action_data: NotifActionDataT = None,
     ) -> None:
+        if isinstance(sound, _UnsetType):
+            sound = get_config().default_notif_sound
+        if isinstance(url, _UnsetType):
+            url = get_config().default_notif_url
         if tag and not group:
             group = tag
         self.payload = {

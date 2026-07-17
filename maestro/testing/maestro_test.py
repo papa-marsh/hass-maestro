@@ -6,7 +6,7 @@ from typing import Any
 from apscheduler.jobstores.base import JobLookupError  # type:ignore[import-untyped]
 from freezegun import freeze_time
 
-from maestro.config import TIMEZONE
+from maestro.config import get_config
 from maestro.domains.entity import Entity
 from maestro.handlers.types import EventTypeName
 from maestro.integrations.home_assistant.domain import Domain
@@ -386,10 +386,11 @@ class MaestroTest:
         if isinstance(frozen_time, str):
             frozen_time = datetime.fromisoformat(frozen_time)
 
+        timezone = get_config().timezone
         if frozen_time.tzinfo is None:
-            frozen_time = frozen_time.replace(tzinfo=TIMEZONE)
-        elif frozen_time.tzinfo != TIMEZONE:
-            frozen_time = frozen_time.astimezone(TIMEZONE)
+            frozen_time = frozen_time.replace(tzinfo=timezone)
+        elif frozen_time.tzinfo != timezone:
+            frozen_time = frozen_time.astimezone(timezone)
 
         tz_offset = frozen_time.utcoffset()
         if tz_offset is None:

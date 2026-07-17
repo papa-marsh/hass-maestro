@@ -1,4 +1,4 @@
-from maestro.config import NOTIFY_ACTION_MAPPINGS
+from maestro.config import get_config
 from maestro.domains.entity import HOME, Entity
 from maestro.integrations.home_assistant.domain import Domain
 from maestro.utils.internal import test_mode_active
@@ -14,7 +14,7 @@ class Person(Entity):
         if test_mode_active():
             return f"test_mock_notify_{self.id.entity}"
 
-        return NOTIFY_ACTION_MAPPINGS.get(self.id, "")
+        return get_config().notify_action_mappings.get(self.id, "")
 
     @property
     def is_home(self) -> bool:

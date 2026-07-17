@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta
 from enum import IntEnum
 from typing import Any
 
-from maestro.config import TIMEZONE
+from maestro.config import get_config
 
 SECONDS_PER_MINUTE = 60
 SECONDS_PER_HOUR = 60 * SECONDS_PER_MINUTE
@@ -21,15 +21,15 @@ class IntervalSeconds(IntEnum):
 
 
 def local_now() -> datetime:
-    return datetime.now().astimezone(TIMEZONE)
+    return datetime.now().astimezone(get_config().timezone)
 
 
 def resolve_timestamp(iso_string: str) -> datetime:
     dt = datetime.fromisoformat(iso_string)
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=TIMEZONE)
+        return dt.replace(tzinfo=get_config().timezone)
     else:
-        return dt.astimezone(TIMEZONE)
+        return dt.astimezone(get_config().timezone)
 
 
 def format_duration(duration: timedelta, verbose: bool = False) -> str:

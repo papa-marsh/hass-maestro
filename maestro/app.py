@@ -1,6 +1,8 @@
 import atexit
 import json
+import os
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from apscheduler.executors.pool import ThreadPoolExecutor  # type:ignore[import-untyped]
 from apscheduler.jobstores.redis import RedisJobStore  # type:ignore[import-untyped]
@@ -8,13 +10,7 @@ from apscheduler.schedulers.background import BackgroundScheduler  # type:ignore
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
-from maestro.config import (
-    DATABASE_URL,
-    REDIS_HOST,
-    REDIS_PORT,
-    SQLALCHEMY_TRACK_MODIFICATIONS,
-    TIMEZONE,
-)
+from maestro.config import MaestroConfig, get_config, register_config
 from maestro.integrations.home_assistant.websocket_manager import WebSocketManager
 from maestro.triggers.cron import CronTriggerManager
 from maestro.triggers.maestro import MaestroEvent, MaestroTriggerManager
@@ -54,17 +50,18 @@ class MaestroFlask(Flask):
 
     def _initialize_db(self) -> None:
         log.info("Initializing database connection")
-        self.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
-        self.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = SQLALCHEMY_TRACK_MODIFICATIONS
+        self.config["SQLALCHEMY_DATABASE_URI"] = get_config().db_url
+        self.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
         db.init_app(self)
         log.info("Database connection initialized")
 
     def _initialize_scheduler(self) -> None:
         log.info("Initializing job scheduler")
+        config = get_config()
         self.scheduler = BackgroundScheduler(
-            jobstores={"default": RedisJobStore(host=REDIS_HOST, port=REDIS_PORT)},
+            jobstores={"default": RedisJobStore(host=config.redis_host, port=config.redis_port)},
             executors={"default": ThreadPoolExecutor(max_workers=100)},
-            timezone=TIMEZONE,
+            timezone=config.timezone,
         )
         self.scheduler.start()
         log.info("Job scheduler initialized")
@@ -88,17 +85,37 @@ class MaestroFlask(Flask):
     def _initialize_test_environment(self) -> None:
         """Initialize in-memory scheduler for registering decorators while testing."""
         log.info("Initializing test environment")
-        self.scheduler = BackgroundScheduler(timezone=TIMEZONE)
+        self.scheduler = BackgroundScheduler(timezone=get_config().timezone)
         log.info("Test environment initialized")
 
     def _initialize_shell_environment(self) -> None:
         """Initialize Flask shell environment with scripts loaded but no background services"""
         log.info("Initializing shell environment")
         load_script_modules()
-        self.scheduler = BackgroundScheduler(timezone=TIMEZONE)
+        self.scheduler = BackgroundScheduler(timezone=get_config().timezone)
         log.info("Shell environment initialized - background services disabled")
 
 
+def _config_from_env() -> MaestroConfig:
+    """Transitional env-var bridge until MaestroApp accepts constructor kwargs"""
+    return MaestroConfig(
+        hass_url=os.environ.get("HOME_ASSISTANT_URL", ""),
+        hass_token=os.environ.get("HOME_ASSISTANT_TOKEN", ""),
+        redis_host=os.environ.get("REDIS_HOST", ""),
+        redis_port=int(os.environ.get("REDIS_PORT", "0")),
+        db_url=os.environ.get("DATABASE_URL", ""),
+        timezone=ZoneInfo(os.environ.get("TIMEZONE", "America/New_York")),
+        autopopulate_registry=os.environ.get("AUTOPOPULATE_REGISTRY", "").lower() in ["true", "1"],
+        domain_ignore_list=tuple(os.environ.get("DOMAIN_IGNORE_LIST", "").split(",")),
+        notify_action_mappings={
+            notify_mapping.split(":")[0]: notify_mapping.split(":")[1]
+            for notify_mapping in os.environ.get("NOTIFY_ACTION_MAPPINGS", "").split(",")
+            if ":" in notify_mapping
+        },
+    )
+
+
+register_config(_config_from_env())
 configure_logging()
 
 

@@ -1,7 +1,7 @@
 import json
 from contextlib import suppress
 
-from maestro.config import AUTOPOPULATE_REGISTRY
+from maestro.config import get_config
 from maestro.integrations.home_assistant.client import HomeAssistantClient
 from maestro.integrations.home_assistant.types import AttributeId, EntityData, EntityId, StateId
 from maestro.integrations.redis import CachedValue, CachedValueT, CachePrefix, RedisClient
@@ -249,7 +249,7 @@ class StateManager:
         if keys_to_delete:
             self.redis_client.delete(*keys_to_delete)
 
-        if AUTOPOPULATE_REGISTRY and not test_mode_active():
+        if get_config().autopopulate_registry and not test_mode_active():
             RegistryManager.upsert_entity(entity_data)
 
     def fetch_cached_entity(self, entity_id: EntityId) -> EntityData | None:

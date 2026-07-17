@@ -7,7 +7,7 @@ from uuid import uuid4
 from apscheduler.schedulers.background import BackgroundScheduler  # type:ignore[import-untyped]
 from apscheduler.triggers.cron import CronTrigger  # type:ignore[import-untyped]
 
-from maestro.config import TIMEZONE
+from maestro.config import get_config
 from maestro.triggers.trigger_manager import TriggerManager
 from maestro.triggers.types import CronParams, TriggerRegistryEntry, TriggerType
 from maestro.utils.logging import build_process_id, log, set_process_id
@@ -89,8 +89,9 @@ def cron_trigger(
             else ",".join(str(d) for d in day_of_week)
         )
 
+        timezone = get_config().timezone
         trigger = (
-            CronTrigger.from_crontab(expr=pattern, timezone=TIMEZONE)
+            CronTrigger.from_crontab(expr=pattern, timezone=timezone)
             if pattern is not None
             else CronTrigger(
                 minute=minute,
@@ -98,7 +99,7 @@ def cron_trigger(
                 day=_day_of_month,
                 month=_month,
                 day_of_week=_day_of_week,
-                timezone=TIMEZONE,
+                timezone=timezone,
             )
         )
         trigger_args = CronParams.TriggerParams(

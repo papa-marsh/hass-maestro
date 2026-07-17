@@ -2,6 +2,9 @@
 class MaestroConfigurationError(Exception): ...
 
 
+class MaestroNotConstructedError(MaestroConfigurationError): ...
+
+
 class SchedulerMisconfiguredError(MaestroConfigurationError): ...
 
 

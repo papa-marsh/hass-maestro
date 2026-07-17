@@ -4,7 +4,7 @@ from typing import Any
 
 from aiohttp import ClientSession, ClientWebSocketResponse, ClientWSTimeout, WSMsgType
 
-from maestro.config import HOME_ASSISTANT_TOKEN, HOME_ASSISTANT_URL
+from maestro.config import get_config
 from maestro.utils.exceptions import WebSocketConnectionError
 from maestro.utils.logging import log
 
@@ -16,9 +16,9 @@ class WebSocketClient:
     """
 
     def __init__(self) -> None:
+        hass_url = get_config().hass_url
         self.ws_url = (
-            HOME_ASSISTANT_URL.replace("http://", "ws://").replace("https://", "wss://")
-            + "/api/websocket"
+            hass_url.replace("http://", "ws://").replace("https://", "wss://") + "/api/websocket"
         )
         self.session: ClientSession | None = None
         self.websocket: ClientWebSocketResponse | None = None
@@ -45,7 +45,7 @@ class WebSocketClient:
             raise WebSocketConnectionError(f"Expected auth_required, got {msg.get('type')}")
         log.debug("Received auth_required message")
 
-        await self._send_message({"type": "auth", "access_token": HOME_ASSISTANT_TOKEN})
+        await self._send_message({"type": "auth", "access_token": get_config().hass_token})
 
         auth_response = await self._receive_message()
         if auth_response.get("type") == "auth_ok":

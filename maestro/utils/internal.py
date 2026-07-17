@@ -14,7 +14,7 @@ from typing import Any
 
 import structlog
 
-from maestro import config
+from maestro.config import get_config
 from maestro.utils.exceptions import MissingScriptsDirectoryError
 from maestro.utils.logging import log
 
@@ -36,7 +36,7 @@ def add_timezone_timestamp(
     event_dict: MutableMapping[str, Any],
 ) -> Mapping[str, Any]:
     """Add timestamp in configured timezone."""
-    event_dict["timestamp"] = datetime.now(config.TIMEZONE).isoformat()
+    event_dict["timestamp"] = datetime.now(get_config().timezone).isoformat()
     return event_dict
 
 

@@ -7,7 +7,7 @@ from typing import Any
 from apscheduler.schedulers.background import BackgroundScheduler  # type:ignore[import-untyped]
 from apscheduler.triggers.date import DateTrigger  # type:ignore[import-untyped]
 
-from maestro.config import TIMEZONE
+from maestro.config import get_config
 from maestro.domains.sun import Sun
 from maestro.triggers.trigger_manager import TriggerManager
 from maestro.triggers.types import SunParams, TriggerRegistryEntry, TriggerType
@@ -69,7 +69,7 @@ class SunTriggerManager(TriggerManager):
             )
             next_run += timedelta(days=1)
 
-        return DateTrigger(run_date=next_run, timezone=TIMEZONE)
+        return DateTrigger(run_date=next_run, timezone=get_config().timezone)
 
 
 def sun_trigger(solar_event: SolarEvent, offset: timedelta = timedelta()) -> Callable:

@@ -5,7 +5,7 @@ from typing import Any
 import requests
 from requests.exceptions import JSONDecodeError, RequestException
 
-from maestro.config import DOMAIN_IGNORE_LIST, HOME_ASSISTANT_TOKEN, HOME_ASSISTANT_URL
+from maestro.config import get_config
 from maestro.integrations.home_assistant.domain import Domain
 from maestro.integrations.home_assistant.types import EntityData, EntityId
 from maestro.utils.dates import resolve_timestamp, serialize_datetimes
@@ -65,7 +65,7 @@ class HomeAssistantClient:
                 raise MalformedResponseError("Entity dictionary is missing entity_id string")
 
             domain = state_data["entity_id"].split(".")[0]
-            if domain in DOMAIN_IGNORE_LIST:
+            if domain in get_config().domain_ignore_list:
                 continue
 
             entity = self.resolve_entity_response(state_data)
@@ -197,9 +197,10 @@ class HomeAssistantClient:
         params: dict | None = None,
     ) -> tuple[dict | list, int]:
         """Execute an HTTP request to the Home Assistant API"""
-        url = f"{HOME_ASSISTANT_URL}{path}"
+        config = get_config()
+        url = f"{config.hass_url}{path}"
         headers = {
-            "Authorization": f"Bearer {HOME_ASSISTANT_TOKEN}",
+            "Authorization": f"Bearer {config.hass_token}",
             "Content-Type": "application/json",
         }
 
