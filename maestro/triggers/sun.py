@@ -8,11 +8,13 @@ from apscheduler.schedulers.background import BackgroundScheduler  # type:ignore
 from apscheduler.triggers.date import DateTrigger  # type:ignore[import-untyped]
 
 from maestro.config import TIMEZONE
-from maestro.registry import sun
+from maestro.domains.sun import Sun
 from maestro.triggers.trigger_manager import TriggerManager
 from maestro.triggers.types import SunParams, TriggerRegistryEntry, TriggerType
 from maestro.utils.dates import local_now
 from maestro.utils.logging import build_process_id, log, set_process_id
+
+sun = Sun("sun.sun")
 
 
 class SolarEvent(StrEnum):
@@ -50,7 +52,7 @@ class SunTriggerManager(TriggerManager):
         offset: timedelta,
         rescheduling: bool,
     ) -> DateTrigger:
-        solar_event_datetime = getattr(sun.sun, solar_event)
+        solar_event_datetime = getattr(sun, solar_event)
 
         # Avoid infinite trigger loops that can caused by offsets when a trigger fires and is
         # rescheduled. (eg. if <sunset - 1 hour> fires, it will try to reschedule based on the
@@ -72,8 +74,8 @@ class SunTriggerManager(TriggerManager):
 
 def sun_trigger(solar_event: SolarEvent, offset: timedelta = timedelta()) -> Callable:
     """
-    Decorator to register a function as a sun-based trigger for the specified cron pattern.
-    Note sun triggers require that the `sun.sun` entity has been populated in maestro/registry.
+    Decorator to register a function as a sun-based trigger for the specified solar event.
+    Requires the Home Assistant sun integration (the `sun.sun` entity).
     Eg. Open the blinds 1h before sunrise:
         `@sun_trigger(event=SunEvent.SUNRISE, offset=timedelta(hours=-1))`
 

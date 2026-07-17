@@ -27,9 +27,6 @@ from .update import Update
 from .weather import Weather
 from .zone import Zone
 
-...  # Custom domains must be imported last to avoid circular imports
-from scripts.custom_domains import *  # noqa: F403, E402 (see maestro.registry.README)
-
 __all__ = [
     BinarySensor.__name__,
     Button.__name__,

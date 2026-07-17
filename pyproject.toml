@@ -1,5 +1,9 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "maestro"
+name = "hass-maestro"
 version = "0.1.0"
 description = "Strongly-typed Python automation framework for Home Assistant"
 requires-python = ">=3.14"
@@ -32,6 +36,9 @@ dev = [
     "types-setuptools>=80",
     "types-sqlalchemy>=1.4",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["maestro"]
 
 [tool.ruff]
 cache-dir = ".cache/ruff"
