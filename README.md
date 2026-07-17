@@ -18,76 +18,101 @@ Maestro is a framework that lets you write Home Assistant automations in Python 
 
 ### Prerequisites
 
-- Python 3.13+
-- Docker & Docker Compose
+- Python 3.14+
+- A Redis instance (backs the state cache, entity locks, and the persistent job scheduler)
 - Home Assistant instance with WebSocket API access
 
 ### Setup
 
-1. **Clone the repository**
+1. **Install the library**
 
    ```bash
-   git clone https://github.com/papa-marsh/maestro
-   cd maestro
+   pip install hass-maestro
    ```
 
-2. **Initialize version control for your scripts**
+2. **Create your project**
+
+   ```
+   my-automations/
+     app.py             # Entrypoint: constructs the MaestroApp
+     scripts/           # Your automation modules
+     registry/          # Generated entity registry (created for you)
+     custom_domains/    # Optional Entity subclass extensions
+   ```
+
+3. **Write your `app.py`**
+
+   ```python
+   import os
+
+   from maestro import MaestroApp
+
+   app = MaestroApp(
+       hass_url=os.environ["HOME_ASSISTANT_URL"],
+       hass_token=os.environ["HOME_ASSISTANT_TOKEN"],
+       redis_host=os.environ["REDIS_HOST"],
+       redis_port=int(os.environ["REDIS_PORT"]),
+   )
+   ```
+
+   Everything initializes inside the constructor: configuration, logging, script loading, the job scheduler, and the Home Assistant websocket connection. How you provide settings (env vars, a config file, hardcoded values) is entirely up to your `app.py`.
+
+   To create a long-lived access token, navigate to the `<hass_url>/profile/security` page in Home Assistant. Pro tip: create the token from a separate account named "Maestro" so entity state history shows which actions Maestro triggered.
+
+4. **Run it**
 
    ```bash
-   cd scripts
-   git init
+   gunicorn app:app
    ```
 
-   The `scripts/` directory is gitignored by the main repo, so you should create your own repository here to version control your automation logic.
+   `MaestroApp` subclasses Flask, so it's directly servable by any WSGI server. Run exactly one worker process (gunicorn's default)—the websocket listener and scheduler live in-process, and multiple workers would run your automations multiple times.
 
-3. **Configure environment**
+   You should see `WebSocket authenticated successfully` in the logs.
 
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Home Assistant URL, long-lived access token, etc.
-   ```
+### Constructor Reference
 
-   To create a new long-lived access token, navigate to the `<hass_url>/profile/security` page in Home Assistant.
+```python
+app = MaestroApp(
+    hass_url=...,                     # Required. Home Assistant base URL
+    hass_token=...,                   # Required. Long-lived access token
+    redis_host=...,                   # Required
+    redis_port=...,                   # Required
+    db_url=None,                      # Optional SQLAlchemy URL; None disables the DB entirely
+    scripts_dir=Path("scripts"),      # Directory of automation modules, imported at startup
+    registry_dir=Path("registry"),    # Where generated entity registry modules are written
+    custom_domains_dir=None,          # Optional directory of custom Entity subclasses
+    redis_key_prefix="maestro",       # Namespace for all maestro Redis keys
+    timezone="America/New_York",
+    background_services=True,         # False = no websocket/scheduler (REPL and shell use)
+    configure_logging=True,           # False = your process owns logging configuration
+    autopopulate_registry=False,      # Auto-generate registry entries as state changes arrive
+    domain_ignore_list=(),            # HA domains to ignore entirely
+    notify_action_mappings={},        # person entity ID -> HA notify action name
+    default_notif_sound=...,          # Push notification defaults
+    critical_notif_sound=...,
+    default_notif_url=...,
+)
+```
 
-   Pro tip: Create the access token using a separate account named "Maestro" to make it easy to see which actions were triggered by Maestro in an entity's state history.
-
-4. **Start services or deploy new changes**
-
-   ```bash
-   just deploy
-   ```
-
-   **Note:** Whenever you make changes to your automation scripts, run `just deploy` to rebuild and restart the services with your latest changes.
-
-5. **Verify WebSocket connection**
-
-   Check the logs to confirm successful connection:
-
-   ```bash
-   just logs
-   ```
-
-   You should see:
-
-   ```
-   WebSocket authenticated successfully
-   ```
+Only one `MaestroApp` may be constructed per process. Constructing it registers the app globally—library internals and your scripts can access it via `from maestro import get_app`.
 
 ## Writing Automations
 
-All your automation logic goes in the `scripts/` directory. Import from the `maestro` package to access triggers, entities, and utilities.
+All your automation logic goes in your scripts directory. Modules are auto-imported at startup as a package named after the directory (e.g. `scripts.bedroom_lights`), which registers your trigger decorators.
 
 ### A Quick Note on Imports
 
-Everything intended for use in automation scripts is exported from top-level `maestro` packages. You never need to import from deeper in the package structure.
+Everything intended for use in automation scripts is exported from top-level `maestro` packages. You never need to import from deeper in the package structure. Your generated registry is its own top-level package in your project.
 
 ```python
 from maestro.domains import ON, OFF, HOME, AWAY        # State constants
 from maestro.triggers import state_change_trigger       # Trigger decorators
 from maestro.integrations import StateChangeEvent       # Event types
-from maestro.registry import switch, light, sensor      # Entity instances
 from maestro.utils import Notif, JobScheduler, log      # Utilities
 from maestro.testing import MaestroTest                 # Test framework
+
+from registry import switch, light, sensor              # Your generated entity instances
+from custom_domains import Thermostat                   # Your custom domain classes (if any)
 ```
 
 ### Basic Example
@@ -97,7 +122,8 @@ from maestro.testing import MaestroTest                 # Test framework
 from maestro.domains import OFF, ON
 from maestro.triggers import state_change_trigger
 from maestro.integrations import StateChangeEvent
-from maestro.registry import switch, light
+
+from registry import switch, light
 
 @state_change_trigger(switch.bedroom_motion_sensor, to_state=ON)
 def motion_detected(state_change: StateChangeEvent) -> None:
@@ -115,7 +141,8 @@ def motion_cleared(state_change: StateChangeEvent) -> None:
 ```python
 # scripts/morning_routine.py
 from maestro.triggers import cron_trigger
-from maestro.registry import switch, climate
+
+from registry import switch, climate
 
 @cron_trigger(hour=7, minute=0)
 def morning_routine() -> None:
@@ -129,7 +156,8 @@ def morning_routine() -> None:
 ```python
 from maestro.triggers import state_change_trigger
 from maestro.integrations import StateChangeEvent
-from maestro.registry import sensor, switch
+
+from registry import sensor, switch
 
 @state_change_trigger(sensor.outdoor_temperature)
 def temperature_monitor(state_change: StateChangeEvent) -> None:
@@ -214,7 +242,7 @@ def periodic_task() -> None:
 
 ### Sun Trigger
 
-Runs based on solar events (sunrise, solar noon, dusk, etc.) with optional time offsets.
+Runs based on solar events (sunrise, solar noon, dusk, etc.) with optional time offsets. Requires the Home Assistant sun integration (the `sun.sun` entity).
 
 ```python
 from datetime import timedelta
@@ -322,10 +350,10 @@ These are distinct from Maestro triggers—HA can restart independently while Ma
 
 ## Entity Registry
 
-Maestro automatically populates a typed entity registry from your Home Assistant instance. Access entities with full autocomplete:
+Maestro generates a typed entity registry from your Home Assistant instance into your project's `registry_dir`. Access entities with full autocomplete:
 
 ```python
-from maestro.registry import switch, light, climate, sensor
+from registry import switch, light, climate, sensor
 
 # All your entities are available as typed objects
 switch.living_room_lamp.turn_on()
@@ -333,7 +361,7 @@ climate.bedroom_thermostat.set_temperature(72)
 temp = sensor.outdoor_temperature.state
 ```
 
-The registry is code-generated from your HA instance's entities. Each entity has typed attributes accessible as properties:
+Each entity has typed attributes accessible as properties:
 
 ```python
 # State is always a string
@@ -343,6 +371,8 @@ state = sensor.outdoor_temperature.state
 battery = sensor.outdoor_temperature.battery_level   # int
 friendly_name = sensor.outdoor_temperature.friendly_name  # str
 ```
+
+With `autopopulate_registry=True`, registry entries are created and refreshed automatically as entity state changes arrive. `RegistryManager.prune()` removes entries for entities that no longer exist in Home Assistant. The generated modules live in your project—committing or gitignoring them is your call.
 
 ## Entity Methods
 
@@ -417,16 +447,16 @@ media_player.living_room.previous()
 
 ## Custom Domain Subclasses
 
-You can extend built-in domain classes with device-specific or integration-specific functionality. Custom domains live in `scripts/custom_domains/` and are automatically injected into the `maestro.domains` namespace at startup.
+You can extend built-in domain classes with device-specific or integration-specific functionality. Custom domains live in your project's `custom_domains_dir` (pass it to the `MaestroApp` constructor); Maestro imports the package at startup, before your registry and scripts load.
 
-**Important:** Import from the specific domain module (e.g., `maestro.domains.climate`), not the package (`maestro.domains`), to avoid circular imports.
+**Important:** Custom domain modules import from the specific domain module (e.g., `maestro.domains.climate`). Your scripts import your custom classes directly from your package (e.g., `from custom_domains import TeslaHVAC`).
 
 ### Example: Attribute Value Enums
 
 Add type safety when passing argument values:
 
 ```python
-# scripts/custom_domains/climate.py
+# custom_domains/climate.py
 from enum import StrEnum, auto
 from typing import override
 
@@ -457,7 +487,7 @@ class TeslaHVAC(Climate):
 When a HA integration exposes actions under a different domain:
 
 ```python
-# scripts/custom_domains/sonos_speaker.py
+# custom_domains/sonos_speaker.py
 from maestro.domains.media_player import MediaPlayer
 from maestro.integrations import Domain
 
@@ -478,10 +508,10 @@ class SonosSpeaker(MediaPlayer):
         )
 ```
 
-Custom domain classes must be exported from `scripts/custom_domains/__init__.py`:
+Custom domain classes must be exported from your package's `__init__.py`:
 
 ```python
-# scripts/custom_domains/__init__.py
+# custom_domains/__init__.py
 from .climate import TeslaHVAC
 from .sonos_speaker import SonosSpeaker
 
@@ -491,17 +521,18 @@ __all__ = [
 ]
 ```
 
-Once defined, registry-generated entity classes automatically inherit from your custom subclass instead of the base domain class.
+To use a custom class as an entity's registry parent, edit the generated registry class's parent (e.g. `class MediaPlayerKitchen(SonosSpeaker):`). The registry generator preserves custom parents through updates and imports them from your custom domains package.
 
 ## Sending Push Notifications
 
-Maestro includes a push notification system for iOS devices via Home Assistant. Supports priorities, actionable buttons, custom sounds, and grouping.
+Maestro includes a push notification system for iOS devices via Home Assistant. Supports priorities, actionable buttons, custom sounds, and grouping. Notification routing uses the `notify_action_mappings` constructor parameter to map person entity IDs to HA notify actions (e.g. `{"person.john_doe": "mobile_app_johns_iphone"}`).
 
 ### Basic Notification
 
 ```python
 from maestro.utils import Notif
-from maestro.registry import person
+
+from registry import person
 
 # Create and send a notification
 Notif(
@@ -561,7 +592,8 @@ Notif(
 ```python
 from maestro.triggers import notif_action_trigger
 from maestro.integrations import NotifActionEvent
-from maestro.registry import lock
+
+from registry import lock
 
 @notif_action_trigger("UNLOCK_DOOR")
 def handle_unlock(notif_action: NotifActionEvent) -> None:
@@ -591,7 +623,8 @@ Schedule one-off functions to run at a specific time. Jobs persist across restar
 ```python
 from datetime import timedelta
 from maestro.utils import JobScheduler, local_now
-from maestro.registry import light
+
+from registry import light
 
 def delayed_light_off() -> None:
     """Turn off lights after delay"""
@@ -622,7 +655,11 @@ scheduler.schedule_job(
 
 ## Testing Your Automations
 
-Maestro includes a testing framework that lets you unit test your automations without a running Home Assistant instance. Tests use in-memory mocks and require no Redis or HA connection.
+Maestro includes a testing framework that lets you unit test your automations without a running Home Assistant instance. Tests use in-memory mocks and require no Redis or HA connection. The `mt` fixture registers automatically as a pytest plugin when hass-maestro is installed—no conftest wiring needed.
+
+```bash
+pip install hass-maestro[test]   # adds pytest + freezegun
+```
 
 **Key Features:**
 
@@ -637,11 +674,10 @@ Maestro includes a testing framework that lets you unit test your automations wi
 # scripts/tests/test_bedroom_lights.py
 from maestro.domains import OFF, ON
 from maestro.integrations import Domain
-from maestro.registry import light, switch
 from maestro.testing import MaestroTest
 
-# Import the module you want to test to register its triggers
-from scripts import bedroom_lights
+from registry import light, switch
+from scripts import bedroom_lights  # Import the module under test to register its triggers
 
 def test_motion_turns_on_light(mt: MaestroTest) -> None:
     """Test that motion triggers the bedroom light"""
@@ -706,17 +742,17 @@ pytest scripts/tests/test_bedroom_lights.py::test_motion_turns_on_light
 
 ### Interactive Shell
 
-```bash
-# Flask shell with pre-loaded imports (StateManager, RedisClient, etc.)
-just shell
+Construct the app with `background_services=False` to get a fully-loaded environment (scripts, registry, DB) without the websocket or scheduler—ideal for a REPL or `flask shell`:
 
-# Direct bash access to the container
-just bash
+```python
+app = MaestroApp(..., background_services=False)
 ```
+
+Since `MaestroApp` is a Flask app, `@app.shell_context_processor` works as usual for pre-loading imports into `flask shell`.
 
 ### Working with the Database
 
-Maestro includes PostgreSQL and Flask-SQLAlchemy for persistent storage.
+Pass `db_url` to enable persistent storage via Flask-SQLAlchemy (any SQLAlchemy-supported database; `pip install hass-maestro[postgres]` for PostgreSQL). Omit it and Maestro runs with no database at all.
 
 **Define models:**
 
@@ -724,7 +760,7 @@ Maestro includes PostgreSQL and Flask-SQLAlchemy for persistent storage.
 # scripts/my_automation/models.py
 from typing import ClassVar
 
-from maestro.app import db
+from maestro import db
 
 
 class MyModel(db.Model):  # type:ignore[name-defined]
@@ -737,16 +773,15 @@ class MyModel(db.Model):  # type:ignore[name-defined]
 
 **Create tables:**
 
-```bash
-just shell
->>> from maestro.app import db
->>> db.create_all()  # Creates all tables from imported models
+```python
+with app.app_context():
+    db.create_all()  # Creates all tables from imported models
 ```
 
 **Query data:**
 
 ```python
-from maestro.app import db
+from maestro import db
 from scripts.my_automation.models import MyModel
 
 # Query
@@ -763,7 +798,7 @@ db.session.delete(item)
 db.session.commit()
 ```
 
-**Note:** This project doesn't use migrations. Schema changes require manual SQL or `db.drop_all()` + `db.create_all()` (loses data).
+**Note:** Maestro doesn't manage migrations. Schema changes require manual SQL or `db.drop_all()` + `db.create_all()` (loses data).
 
 ## Example: Complete Automation
 
@@ -771,7 +806,7 @@ db.session.commit()
 # scripts/bedtime_routine/models.py
 from typing import ClassVar
 
-from maestro.app import db
+from maestro import db
 
 
 class SnoozeHistory(db.Model):  # type:ignore[name-defined]
@@ -784,14 +819,14 @@ class SnoozeHistory(db.Model):  # type:ignore[name-defined]
 ```
 
 ```python
-# scripts/bedtime_routine/__init__.py
-from maestro.app import db
+# scripts/bedtime_routine/bedtime.py
+from maestro import db
 from maestro.domains import HOME
 from maestro.integrations import StateChangeEvent, NotifActionEvent
-from maestro.registry import switch, light, climate, person
 from maestro.triggers import state_change_trigger, cron_trigger, notif_action_trigger
 from maestro.utils import Notif, JobScheduler, local_now
 
+from registry import switch, light, climate, person
 from .models import SnoozeHistory
 
 SNOOZE_MINUTES = 15
@@ -849,10 +884,10 @@ def welcome_home(state_change: StateChangeEvent) -> None:
 
 **Solutions**:
 
-1. Verify `HOME_ASSISTANT_URL` in `.env` is correct (e.g., `http://192.168.1.100:8123`)
-2. Verify `HOME_ASSISTANT_TOKEN` is a valid long-lived access token
+1. Verify `hass_url` is correct (e.g., `http://192.168.1.100:8123`)
+2. Verify `hass_token` is a valid long-lived access token
 3. Check Home Assistant is accessible: `curl http://<your-ha-url>/api/`
-4. Review Maestro logs: `just logs`
+4. Review your service logs
 
 **Problem**: WebSocket keeps reconnecting
 
@@ -867,8 +902,7 @@ def welcome_home(state_change: StateChangeEvent) -> None:
 After reconnection, Maestro automatically syncs all entity states if it was disconnected for more than 30 minutes. If you still see issues:
 
 1. Check logs for "State sync completed" message after reconnection
-2. Verify the entity's domain is not in `DOMAIN_IGNORE_LIST`
-3. Enable debug logging to see all events: Set `LOG_LEVEL=DEBUG` in `.env`
+2. Verify the entity's domain is not in `domain_ignore_list`
 
 ## Contributing
 
@@ -883,8 +917,8 @@ Pull requests are welcome!
 
 ## License
 
-MIT License - see [LICENSE](LICENSE)
+Creative Commons Attribution-NonCommercial 4.0 - see [LICENSE](LICENSE)
 
 ## Support
 
-For issues and questions, see the [GitHub Issues](https://github.com/papa-marsh/maestro/issues).
+For issues and questions, see the [GitHub Issues](https://github.com/papa-marsh/hass-maestro/issues).

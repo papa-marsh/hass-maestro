@@ -6,22 +6,26 @@ build-backend = "hatchling.build"
 name = "hass-maestro"
 version = "0.1.0"
 description = "Strongly-typed Python automation framework for Home Assistant"
+readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.14"
 dependencies = [
     "apscheduler>=3.11,<4",
     "aiohttp>=3.11,<4",
     "flask>=3,<4",
     "flask-sqlalchemy>=3.1,<4",
-    "gunicorn>=21,<23",
-    "psycopg[binary]>=3.2,<4",
-    "python-dateutil>=2.9,<3",
     "redis>=6,<7",
     "requests>=2.32,<3",
     "sqlalchemy>=2,<3",
     "structlog>=25,<26",
-    "tzlocal>=5,<6",
-    "catt>=0.13.1",
 ]
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.2,<4"]
+test = ["pytest>=8,<9", "freezegun>=1.5,<2"]
+
+[project.entry-points.pytest11]
+maestro = "maestro.testing.fixtures"
 
 [dependency-groups]
 dev = [
@@ -69,11 +73,6 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"maestro/registry/**.py" = [
-    "E501", # Line length
-    "F401", # Unused imports
-    "I001", # Unsorted imports
-]
 "maestro/testing/maestro_test.py" = [
     "S101", # Assert statements
 ]

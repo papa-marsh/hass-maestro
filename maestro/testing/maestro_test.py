@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import Any
 
 from apscheduler.jobstores.base import JobLookupError  # type:ignore[import-untyped]
-from freezegun import freeze_time
 
 from maestro.config import get_config
 from maestro.domains.entity import Entity
@@ -380,6 +379,9 @@ class MaestroTest:
 
     def mock_datetime_as(self, frozen_time: datetime | str | None = None) -> Any:
         """Wrapper around freeze_time that supports local_now() and handles timezone weirdness."""
+        # Imported lazily so the pytest plugin loads without freezegun installed
+        from freezegun import freeze_time
+
         if frozen_time is None:
             return freeze_time()
 
