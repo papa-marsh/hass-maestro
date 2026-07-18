@@ -43,6 +43,7 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["maestro"]
+exclude = ["maestro/testing/tests", "maestro/registry/README.md"]
 
 [tool.ruff]
 cache-dir = ".cache/ruff"
