@@ -1,0 +1,23 @@
+from enum import StrEnum, auto
+from typing import Any
+
+from maestro.domains._entity import Entity
+from maestro.integrations._home_assistant.domain import Domain
+
+
+class ForecastType(StrEnum):
+    HOURLY = auto()
+    TWICE_DAILY = auto()
+    DAILY = auto()
+
+
+class Weather(Entity):
+    domain = Domain.WEATHER
+    allow_set_state = False
+
+    def get_forecasts(self, type: ForecastType) -> dict[str, Any]:
+        return self.perform_action(
+            "get_forecasts",
+            type=type,
+            response_expected=True,
+        )

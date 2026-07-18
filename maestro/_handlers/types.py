@@ -1,0 +1,72 @@
+from collections.abc import Callable
+from dataclasses import dataclass
+from enum import StrEnum
+
+from maestro.integrations._home_assistant.types import WebSocketEvent
+
+
+class EventTypeName(StrEnum):
+    STATE_CHANGED = "state_changed"
+    IOS_NOTIF_ACTION = "ios.notification_action_fired"
+    HASS_STARTUP = "maestro_hass_started"
+    HASS_SHUTDOWN = "homeassistant_final_write"
+    DEFAULT = "event_fired"
+
+
+@dataclass
+class EventType:
+    name: EventTypeName
+    handler_func: Callable[[WebSocketEvent], None]
+    process_id_prefix: str
+
+
+def _build_registry() -> dict[EventTypeName, EventType]:
+    """Build registry lazily to avoid circular imports"""
+    from maestro._handlers.event_fired import handle_event_fired
+    from maestro._handlers.hass_shutdown import handle_hass_shutdown
+    from maestro._handlers.hass_startup import handle_hass_startup
+    from maestro._handlers.notif_action import handle_notif_action
+    from maestro._handlers.state_changed import handle_state_changed
+
+    return {
+        EventTypeName.STATE_CHANGED: EventType(
+            name=EventTypeName.STATE_CHANGED,
+            handler_func=handle_state_changed,
+            process_id_prefix="state_change",
+        ),
+        EventTypeName.IOS_NOTIF_ACTION: EventType(
+            name=EventTypeName.IOS_NOTIF_ACTION,
+            handler_func=handle_notif_action,
+            process_id_prefix="ios_notif_action",
+        ),
+        EventTypeName.HASS_STARTUP: EventType(
+            name=EventTypeName.HASS_STARTUP,
+            handler_func=handle_hass_startup,
+            process_id_prefix="hass_startup",
+        ),
+        EventTypeName.HASS_SHUTDOWN: EventType(
+            name=EventTypeName.HASS_SHUTDOWN,
+            handler_func=handle_hass_shutdown,
+            process_id_prefix="hass_shutdown",
+        ),
+        EventTypeName.DEFAULT: EventType(
+            name=EventTypeName.DEFAULT,
+            handler_func=handle_event_fired,
+            process_id_prefix="event_fired",
+        ),
+    }
+
+
+_registry_cache: dict[EventTypeName, EventType] | None = None
+
+
+def get_event_type(event_type_name: str) -> EventType:
+    global _registry_cache
+    if _registry_cache is None:
+        _registry_cache = _build_registry()
+
+    try:
+        event_type_name_enum = EventTypeName(event_type_name)
+        return _registry_cache[event_type_name_enum]
+    except ValueError:
+        return _registry_cache[EventTypeName.DEFAULT]

@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-import maestro.app as app_module
+import maestro._app as app_module
 from maestro import MaestroApp, get_app
-from maestro.config import MaestroConfig, get_config, register_config
+from maestro._config import MaestroConfig, get_config, register_config
 from maestro.exceptions import MaestroAlreadyConstructedError, MaestroNotConstructedError
 
 

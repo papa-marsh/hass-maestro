@@ -1,10 +1,10 @@
-from .cron import cron_trigger
-from .event_fired import event_fired_trigger
-from .hass import HassEvent, hass_trigger
-from .maestro import MaestroEvent, maestro_trigger
-from .notif_action import notif_action_trigger
-from .state_change import state_change_trigger
-from .sun import SolarEvent, sun_trigger
+from ._cron import cron_trigger
+from ._event_fired import event_fired_trigger
+from ._hass import HassEvent, hass_trigger
+from ._maestro import MaestroEvent, maestro_trigger
+from ._notif_action import notif_action_trigger
+from ._state_change import state_change_trigger
+from ._sun import SolarEvent, sun_trigger
 
 __all__ = [
     cron_trigger.__name__,

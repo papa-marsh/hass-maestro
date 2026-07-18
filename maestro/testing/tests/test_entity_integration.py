@@ -4,9 +4,9 @@ Verifies that Entity objects automatically use mocks and work seamlessly in test
 """
 
 from maestro.domains import BinarySensor, Switch
-from maestro.domains.entity import OFF, ON
-from maestro.integrations.home_assistant.domain import Domain
-from maestro.testing.maestro_test import MaestroTest
+from maestro.domains._entity import OFF, ON
+from maestro.integrations._home_assistant.domain import Domain
+from maestro.testing._maestro_test import MaestroTest
 
 
 def test_entity_auto_uses_mock_state_manager(mt: MaestroTest) -> None:

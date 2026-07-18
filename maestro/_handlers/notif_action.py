@@ -1,0 +1,24 @@
+from maestro.integrations._home_assistant.types import NotifActionEvent, WebSocketEvent
+from maestro.triggers._notif_action import NotifActionTriggerManager
+from maestro.utils._logging import log
+
+
+def handle_notif_action(event: WebSocketEvent) -> None:
+    user_id = event.context.user_id
+    action_name = event.data["actionName"]
+    device_name = event.data["sourceDeviceName"]
+
+    log.debug("Processing notif action event", action=action_name, device=device_name)
+
+    ios_notif_action = NotifActionEvent(
+        time_fired=event.time_fired,
+        type=event.event_type,
+        data=event.data,
+        user_id=user_id,
+        name=action_name,
+        action_data=event.data.get("action_data"),
+        device_id=event.data["sourceDeviceID"],
+        device_name=device_name,
+    )
+
+    NotifActionTriggerManager.fire_triggers(ios_notif_action)

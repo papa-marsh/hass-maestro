@@ -5,9 +5,9 @@ Verifies that JobScheduler uses mock APScheduler and tracks scheduled jobs.
 
 from datetime import timedelta
 
-from maestro.testing.maestro_test import MaestroTest
-from maestro.utils.dates import local_now
-from maestro.utils.scheduler import JobScheduler
+from maestro.testing._maestro_test import MaestroTest
+from maestro.utils._dates import local_now
+from maestro.utils._scheduler import JobScheduler
 
 
 def test_job_scheduler_uses_mock(mt: MaestroTest) -> None:

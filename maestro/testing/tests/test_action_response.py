@@ -4,8 +4,8 @@ This ensures actions that expect responses receive mocked data properly.
 """
 
 from maestro.domains import Calendar, Switch
-from maestro.integrations.home_assistant.domain import Domain
-from maestro.testing.maestro_test import MaestroTest
+from maestro.integrations._home_assistant.domain import Domain
+from maestro.testing._maestro_test import MaestroTest
 
 
 def test_action_response_queue(mt: MaestroTest) -> None:

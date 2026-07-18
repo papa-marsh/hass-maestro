@@ -3,9 +3,9 @@ Tests for action call tracking and assertions in the testing framework.
 Verifies that performed actions are recorded and can be asserted against.
 """
 
-from maestro.domains.entity import OFF, ON
-from maestro.integrations.home_assistant.domain import Domain
-from maestro.testing.maestro_test import MaestroTest
+from maestro.domains._entity import OFF, ON
+from maestro.integrations._home_assistant.domain import Domain
+from maestro.testing._maestro_test import MaestroTest
 
 
 def test_mock_client_action_tracking(mt: MaestroTest) -> None:

@@ -1,5 +1,5 @@
-from .home_assistant.client import HomeAssistantClient
-from .home_assistant.types import (
+from ._home_assistant.client import HomeAssistantClient
+from ._home_assistant.types import (
     AttributeId,
     Domain,
     EntityData,
@@ -10,8 +10,8 @@ from .home_assistant.types import (
     StateChangeEvent,
     StateId,
 )
-from .redis import RedisClient
-from .state_manager import StateManager
+from ._redis import RedisClient
+from ._state_manager import StateManager
 
 __all__ = [
     AttributeId.__name__,

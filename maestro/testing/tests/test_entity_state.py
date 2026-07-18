@@ -7,10 +7,10 @@ from contextlib import suppress
 
 import pytest
 
-from maestro.domains.entity import OFF, ON
+from maestro.domains._entity import OFF, ON
 from maestro.exceptions import MockEntityDoesNotExistError
-from maestro.testing.maestro_test import MaestroTest
-from maestro.utils.dates import local_now
+from maestro.testing._maestro_test import MaestroTest
+from maestro.utils._dates import local_now
 
 
 def test_set_and_get_state(mt: MaestroTest) -> None:

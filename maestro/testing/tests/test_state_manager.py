@@ -3,9 +3,9 @@ Tests for StateManager entity initialization and cache retrieval.
 Verifies initialize_hass_entity creation, restore_cached behavior, and fetch_cached_entity reads.
 """
 
-from maestro.integrations.home_assistant.types import AttributeId, EntityId
-from maestro.testing.maestro_test import MaestroTest
-from maestro.utils.dates import local_now
+from maestro.integrations._home_assistant.types import AttributeId, EntityId
+from maestro.testing._maestro_test import MaestroTest
+from maestro.utils._dates import local_now
 
 
 def test_initialize_hass_entity_creates_new_entity(mt: MaestroTest) -> None:

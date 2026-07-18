@@ -1,5 +1,5 @@
-from maestro.testing.fixtures import mt
-from maestro.testing.maestro_test import MaestroTest
+from maestro.testing._fixtures import mt
+from maestro.testing._maestro_test import MaestroTest
 
 __all__ = [
     mt.__name__,

@@ -8,11 +8,11 @@ from pathlib import Path
 
 import pytest
 
-from maestro.config import MaestroConfig, register_config
+from maestro._config import MaestroConfig, register_config
 from maestro.exceptions import CustomDomainsNotConfiguredError, MalformedRegistryModule
-from maestro.integrations.home_assistant.types import EntityData, EntityId
-from maestro.registry.registry_manager import RegistryManager
-from maestro.testing.maestro_test import MaestroTest
+from maestro.integrations._home_assistant.types import EntityData, EntityId
+from maestro.registry._registry_manager import RegistryManager
+from maestro.testing._maestro_test import MaestroTest
 
 
 @pytest.fixture
@@ -68,7 +68,7 @@ def test_update_preserves_custom_parent_class(mt: MaestroTest, registry_dir: Pat
     content = module_filepath.read_text()
     assert "class ClimateThermostat(Thermostat):" in content
     assert "from custom_domains import Thermostat" in content
-    assert "from maestro.domains import" not in content
+    assert "from maestro.domains import Climate" not in content
 
 
 def test_mixed_parents_generate_dual_imports(mt: MaestroTest, registry_dir: Path) -> None:

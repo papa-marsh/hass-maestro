@@ -6,8 +6,8 @@ __version__ = version("hass-maestro")
 
 db = SQLAlchemy()
 
-from maestro.app import MaestroApp, get_app  # noqa: E402
-from maestro.config import get_config  # noqa: E402
+from maestro._app import MaestroApp, get_app  # noqa: E402
+from maestro._config import get_config  # noqa: E402
 
 __all__ = [
     MaestroApp.__name__,

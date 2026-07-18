@@ -41,7 +41,7 @@ postgres = ["psycopg[binary]>=3.2,<4"]
 test = ["pytest>=8,<9", "freezegun>=1.5,<2"]
 
 [project.entry-points.pytest11]
-maestro = "maestro.testing.fixtures"
+maestro = "maestro.testing._fixtures"
 
 [dependency-groups]
 dev = [
@@ -89,7 +89,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"maestro/testing/maestro_test.py" = [
+"maestro/testing/_maestro_test.py" = [
     "S101", # Assert statements
 ]
 "**/tests/**.py" = [

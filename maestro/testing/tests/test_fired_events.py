@@ -5,7 +5,7 @@ Verifies that events fired via fire_event() are recorded and can be asserted aga
 
 import pytest
 
-from maestro.testing.maestro_test import MaestroTest
+from maestro.testing._maestro_test import MaestroTest
 
 
 def test_mock_client_fired_event_tracking(mt: MaestroTest) -> None:

@@ -18,7 +18,7 @@ Each generated module contains one class per entity (subclassing the appropriate
 # registry/light.py (auto-generated)
 
 from maestro.domains import Light
-from maestro.domains.entity import EntityAttribute
+from maestro.domains import EntityAttribute
 from datetime import datetime
 
 class LightMultiColorBulb(Light):

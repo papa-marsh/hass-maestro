@@ -5,18 +5,18 @@ Verifies raw events are parsed into typed payloads and dispatched to triggers.
 
 from typing import Any
 
-from maestro.handlers.event_fired import handle_event_fired
-from maestro.handlers.notif_action import handle_notif_action
-from maestro.integrations.home_assistant.types import (
+from maestro._handlers.event_fired import handle_event_fired
+from maestro._handlers.notif_action import handle_notif_action
+from maestro.integrations._home_assistant.types import (
     EventContext,
     FiredEvent,
     NotifActionEvent,
     WebSocketEvent,
 )
-from maestro.testing.maestro_test import MaestroTest
-from maestro.triggers.event_fired import event_fired_trigger
-from maestro.triggers.notif_action import notif_action_trigger
-from maestro.utils.dates import local_now
+from maestro.testing._maestro_test import MaestroTest
+from maestro.triggers._event_fired import event_fired_trigger
+from maestro.triggers._notif_action import notif_action_trigger
+from maestro.utils._dates import local_now
 
 captured_notif_actions: list[NotifActionEvent] = []
 captured_events: list[FiredEvent] = []

@@ -1,0 +1,10 @@
+from maestro.domains._entity import Entity
+from maestro.integrations._home_assistant.domain import Domain
+
+
+class Number(Entity):
+    domain = Domain.NUMBER
+    allow_set_state = False
+
+    def set_value(self, value: float) -> None:
+        self.perform_action("set_value", value=value)
