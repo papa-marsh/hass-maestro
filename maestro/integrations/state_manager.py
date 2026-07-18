@@ -2,12 +2,12 @@ import json
 from contextlib import suppress
 
 from maestro.config import get_config
+from maestro.exceptions import AttributeDoesNotExistError, EntityDoesNotExistError
 from maestro.integrations.home_assistant.client import HomeAssistantClient
 from maestro.integrations.home_assistant.types import AttributeId, EntityData, EntityId, StateId
 from maestro.integrations.redis import CachedValue, CachedValueT, CachePrefix, RedisClient
 from maestro.registry.registry_manager import RegistryManager
 from maestro.utils.dates import IntervalSeconds, local_now, resolve_timestamp
-from maestro.utils.exceptions import AttributeDoesNotExistError, EntityDoesNotExistError
 from maestro.utils.internal import test_mode_active
 from maestro.utils.logging import log
 

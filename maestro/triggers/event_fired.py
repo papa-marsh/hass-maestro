@@ -3,11 +3,11 @@ from contextlib import suppress
 from functools import wraps
 from typing import Any, cast
 
+from maestro.exceptions import EventTriggerOverrideError
 from maestro.handlers.types import EventTypeName
 from maestro.integrations.home_assistant.types import FiredEvent
 from maestro.triggers.trigger_manager import TriggerManager
 from maestro.triggers.types import EventFiredParams, TriggerRegistryEntry, TriggerType
-from maestro.utils.exceptions import EventTriggerOverrideError
 
 
 class EventFiredTriggerManager(TriggerManager):

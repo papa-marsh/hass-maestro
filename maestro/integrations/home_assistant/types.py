@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from maestro.exceptions import EntityMissingFromRegistryError, MalformedRegistryModule
 from maestro.integrations.home_assistant.domain import Domain
 from maestro.utils.dates import resolve_timestamp
-from maestro.utils.exceptions import EntityMissingFromRegistryError, MalformedRegistryModule
 
 if TYPE_CHECKING:
     from maestro.domains import Entity

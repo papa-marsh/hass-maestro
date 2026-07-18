@@ -7,8 +7,8 @@ from apscheduler.job import Job  # type:ignore[import-untyped]
 from apscheduler.jobstores.base import JobLookupError  # type:ignore[import-untyped]
 from apscheduler.schedulers.background import BackgroundScheduler  # type:ignore[import-untyped]
 
+from maestro.exceptions import SchedulerMisconfiguredError
 from maestro.utils.dates import IntervalSeconds, local_now
-from maestro.utils.exceptions import SchedulerMisconfiguredError
 from maestro.utils.internal import test_mode_active
 from maestro.utils.logging import log
 

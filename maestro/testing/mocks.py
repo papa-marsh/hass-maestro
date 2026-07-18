@@ -11,12 +11,12 @@ from apscheduler.jobstores.base import JobLookupError  # type:ignore[import-unty
 from redis.lock import Lock
 
 from maestro.domains.entity import Entity
+from maestro.exceptions import MockEntityDoesNotExistError
 from maestro.integrations.home_assistant.client import HomeAssistantClient
 from maestro.integrations.home_assistant.domain import Domain
 from maestro.integrations.home_assistant.types import EntityData, EntityId, FiredEvent
 from maestro.integrations.redis import CachedValueT, RedisClient
 from maestro.utils.dates import local_now
-from maestro.utils.exceptions import MockEntityDoesNotExistError
 
 
 def hash_string(seed: str) -> int:

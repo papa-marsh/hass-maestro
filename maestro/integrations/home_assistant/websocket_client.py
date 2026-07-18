@@ -5,7 +5,7 @@ from typing import Any
 from aiohttp import ClientSession, ClientWebSocketResponse, ClientWSTimeout, WSMsgType
 
 from maestro.config import get_config
-from maestro.utils.exceptions import WebSocketConnectionError
+from maestro.exceptions import WebSocketConnectionError
 from maestro.utils.logging import log
 
 

@@ -6,15 +6,15 @@ import requests
 from requests.exceptions import JSONDecodeError, RequestException
 
 from maestro.config import get_config
-from maestro.integrations.home_assistant.domain import Domain
-from maestro.integrations.home_assistant.types import EntityData, EntityId
-from maestro.utils.dates import resolve_timestamp, serialize_datetimes
-from maestro.utils.exceptions import (
+from maestro.exceptions import (
     EntityDoesNotExistError,
     EntityOperationError,
     HomeAssistantClientError,
     MalformedResponseError,
 )
+from maestro.integrations.home_assistant.domain import Domain
+from maestro.integrations.home_assistant.types import EntityData, EntityId
+from maestro.utils.dates import resolve_timestamp, serialize_datetimes
 from maestro.utils.logging import log
 
 

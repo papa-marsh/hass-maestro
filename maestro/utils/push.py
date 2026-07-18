@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING, NotRequired, TypedDict
 from uuid import uuid4
 
 from maestro.config import get_config
+from maestro.exceptions import NotifActionMappingError
 from maestro.integrations.home_assistant.domain import Domain
-from maestro.utils.exceptions import NotifActionMappingError
 from maestro.utils.logging import log
 
 if TYPE_CHECKING:

@@ -45,7 +45,7 @@ def get_config() -> MaestroConfig:
     """Return the active config"""
     if _config is None:
         # Imported lazily: `maestro.utils` pulls in modules that read config at call time
-        from maestro.utils.exceptions import MaestroNotConstructedError
+        from maestro.exceptions import MaestroNotConstructedError
 
         raise MaestroNotConstructedError(
             "MaestroApp has not been constructed. "

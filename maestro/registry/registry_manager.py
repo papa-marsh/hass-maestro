@@ -4,15 +4,15 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from maestro.config import get_config
-from maestro.integrations.home_assistant.client import HomeAssistantClient
-from maestro.integrations.home_assistant.types import EntityData, EntityId
-from maestro.integrations.redis import CachePrefix, RedisClient
-from maestro.utils.dates import IntervalSeconds, local_now, resolve_timestamp
-from maestro.utils.exceptions import (
+from maestro.exceptions import (
     CustomDomainsNotConfiguredError,
     MalformedRegistryModule,
     RegistryPruneError,
 )
+from maestro.integrations.home_assistant.client import HomeAssistantClient
+from maestro.integrations.home_assistant.types import EntityData, EntityId
+from maestro.integrations.redis import CachePrefix, RedisClient
+from maestro.utils.dates import IntervalSeconds, local_now, resolve_timestamp
 from maestro.utils.logging import log
 
 

@@ -9,10 +9,10 @@ from pathlib import Path
 import pytest
 
 from maestro.config import MaestroConfig, register_config
+from maestro.exceptions import CustomDomainsNotConfiguredError, MalformedRegistryModule
 from maestro.integrations.home_assistant.types import EntityData, EntityId
 from maestro.registry.registry_manager import RegistryManager
 from maestro.testing.maestro_test import MaestroTest
-from maestro.utils.exceptions import CustomDomainsNotConfiguredError, MalformedRegistryModule
 
 
 @pytest.fixture

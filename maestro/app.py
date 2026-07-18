@@ -11,12 +11,12 @@ from apscheduler.schedulers.background import BackgroundScheduler  # type:ignore
 from flask import Flask
 
 from maestro.config import MaestroConfig, get_config, register_config
+from maestro.exceptions import MaestroAlreadyConstructedError, MaestroNotConstructedError
 from maestro.integrations.home_assistant.websocket_manager import WebSocketManager
 from maestro.triggers.cron import CronTriggerManager
 from maestro.triggers.maestro import MaestroEvent, MaestroTriggerManager
 from maestro.triggers.sun import SunTriggerManager
 from maestro.utils import internal
-from maestro.utils.exceptions import MaestroAlreadyConstructedError, MaestroNotConstructedError
 from maestro.utils.logging import build_process_id, log, set_process_id
 
 _app: MaestroApp | None = None

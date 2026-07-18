@@ -14,7 +14,7 @@ from typing import Any
 import structlog
 
 from maestro.config import get_config
-from maestro.utils.exceptions import MissingScriptsDirectoryError
+from maestro.exceptions import MissingScriptsDirectoryError
 from maestro.utils.logging import log
 
 

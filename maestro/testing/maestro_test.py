@@ -7,6 +7,7 @@ from apscheduler.jobstores.base import JobLookupError  # type:ignore[import-unty
 
 from maestro.config import get_config
 from maestro.domains.entity import Entity
+from maestro.exceptions import MockEntityDoesNotExistError, UnitTestFrameworkError
 from maestro.handlers.types import EventTypeName
 from maestro.integrations.home_assistant.domain import Domain
 from maestro.integrations.home_assistant.types import (
@@ -27,7 +28,6 @@ from maestro.triggers.maestro import MaestroEvent, MaestroTriggerManager
 from maestro.triggers.notif_action import NotifActionTriggerManager
 from maestro.triggers.state_change import StateChangeTriggerManager
 from maestro.utils.dates import local_now
-from maestro.utils.exceptions import MockEntityDoesNotExistError, UnitTestFrameworkError
 
 
 class MaestroTest:

@@ -3,13 +3,13 @@ import threading
 from datetime import timedelta
 from typing import Any
 
+from maestro.exceptions import WebSocketConnectionError
 from maestro.handlers.types import EventTypeName, get_event_type
 from maestro.integrations.home_assistant.types import EventContext, WebSocketEvent
 from maestro.integrations.home_assistant.websocket_client import WebSocketClient
 from maestro.integrations.redis import RedisClient
 from maestro.integrations.state_manager import StateManager
 from maestro.utils.dates import IntervalSeconds, local_now, resolve_timestamp
-from maestro.utils.exceptions import WebSocketConnectionError
 from maestro.utils.logging import build_process_id, log, set_process_id
 
 LAST_CONNECTED_KEY = "websocket_last_connected"

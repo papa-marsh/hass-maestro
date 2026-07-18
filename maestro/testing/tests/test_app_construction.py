@@ -12,7 +12,7 @@ import pytest
 import maestro.app as app_module
 from maestro import MaestroApp, get_app
 from maestro.config import MaestroConfig, get_config, register_config
-from maestro.utils.exceptions import MaestroAlreadyConstructedError, MaestroNotConstructedError
+from maestro.exceptions import MaestroAlreadyConstructedError, MaestroNotConstructedError
 
 
 @pytest.fixture

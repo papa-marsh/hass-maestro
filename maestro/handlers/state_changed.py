@@ -1,4 +1,5 @@
 from maestro.config import get_config
+from maestro.exceptions import MalformedResponseError
 from maestro.handlers.types import EventTypeName
 from maestro.integrations.home_assistant.types import (
     EntityData,
@@ -9,7 +10,6 @@ from maestro.integrations.home_assistant.types import (
 from maestro.integrations.state_manager import StateManager
 from maestro.triggers.state_change import StateChangeTriggerManager
 from maestro.utils.dates import resolve_timestamp
-from maestro.utils.exceptions import MalformedResponseError
 from maestro.utils.logging import log
 
 
