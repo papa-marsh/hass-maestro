@@ -6,18 +6,21 @@ Strongly-typed Python automation framework for Home Assistant, packaged as an in
 
 ```
 maestro/                  # The library package
-  __init__.py             # Public surface: MaestroApp, get_app, db
-  app.py                  # MaestroApp (Flask subclass); all initialization in its constructor
-  config.py               # MaestroConfig frozen dataclass + get_config()/register_config()
+  __init__.py             # Public surface: MaestroApp, get_app, get_config, db, __version__
+  _app.py                 # MaestroApp (Flask subclass); all initialization in its constructor
+  _config.py              # MaestroConfig frozen dataclass + get_config()/register_config()
+  _handlers/              # WebSocket event handler functions (state_changed, event_fired, etc.)
+  exceptions.py           # Public exception hierarchy (maestro.exceptions)
   domains/                # Entity domain classes (Light, Switch, Climate, etc.)
-  handlers/               # WebSocket event handler functions (state_changed, event_fired, etc.)
   integrations/           # External service clients (HA REST, WebSocket, Redis, StateManager)
   triggers/               # Decorator-based trigger system (state_change, cron, sun, etc.)
   registry/               # RegistryManager: generates entity modules into the user's project
   testing/                # Test framework (MaestroTest, mocks, fixtures; ships as a pytest plugin)
     tests/                # The library's own test suite
-  utils/                  # Shared utilities (logging, exceptions, dates, push notifs, scheduler)
+  utils/                  # Shared utilities (logging, dates, push notifs, scheduler)
 ```
+
+Modules and subpackages prefixed with `_` are internal. Everything a consumer may use is re-exported from a top-level package (`maestro`, `maestro.domains`, `maestro.exceptions`, `maestro.integrations`, `maestro.triggers`, `maestro.registry`, `maestro.utils`, `maestro.testing`).
 
 ### The consumer model
 
@@ -74,7 +77,7 @@ There are no import-time singletons or side effects anywhere in the library. Imp
 
 `MaestroConfig` is a frozen dataclass registered at construction. Library code reads it at call time via `get_config()` -- never at import time (no module-level constants derived from config, no config-valued default parameters, no eager class attributes). `get_config()` before construction raises `MaestroNotConstructedError`. In tests, the pytest plugin's `pytest_configure` hook registers a default config.
 
-When adding code that needs config, follow this rule strictly: read `get_config()` inside the function or method that uses the value. For default parameters that should fall back to config, use the `_UnsetType` sentinel pattern (see `utils/push.py`).
+When adding code that needs config, follow this rule strictly: read `get_config()` inside the function or method that uses the value. For default parameters that should fall back to config, use the `_UnsetType` sentinel pattern (see `utils/_push.py`).
 
 ### Event Flow: WebSocket to User Script
 
@@ -86,7 +89,7 @@ When adding code that needs config, follow this rule strictly: read `get_config(
 6. **Thread-per-trigger**: Each matching function runs in its own daemon thread with its own Flask `app_context()` (synchronous in tests via `invoke_funcs_sync()`)
 7. **User script** executes, reading state via `Entity.state` / `EntityAttribute` (cache-through to Redis) and calling actions via `Entity.perform_action()` (REST API)
 
-### State Management (`integrations/state_manager.py`)
+### State Management (`integrations/_state_manager.py`)
 
 `StateManager` is the central orchestrator, owning both a `HomeAssistantClient` (REST) and a `RedisClient` (cache). Key patterns:
 
@@ -98,9 +101,9 @@ When adding code that needs config, follow this rule strictly: read `get_config(
 
 In test mode, `StateManager.__init__()` auto-detects `test_mode_active()` and transparently swaps in `MockHomeAssistantClient` and `MockRedisClient`.
 
-### Redis keys (`integrations/redis.py`)
+### Redis keys (`integrations/_redis.py`)
 
-Every maestro key is namespaced under the configurable `redis_key_prefix` (default `maestro`), enabling shared Redis instances and multiple maestro deployments per Redis. `RedisClient.build_key()` is the single choke point -- all keys, lock names, and SCAN patterns must go through it. Key shape: `maestro:STATE:domain:entity[:attribute]`, plus `REGISTERED:` (registry tracking) and `ENTITY_LOCK:` (distributed locks) prefixes. The APScheduler job store writes its own keys, passed explicitly as `{prefix}:apscheduler.jobs` / `{prefix}:apscheduler.run_times` in `app.py`. Values are JSON-encoded with type metadata for lossless round-trips. Uses `SCAN` (not `KEYS`) for pattern matching. `StateId.cache_key` is a lazy property so IDs can be constructed before config exists.
+Every maestro key is namespaced under the configurable `redis_key_prefix` (default `maestro`), enabling shared Redis instances and multiple maestro deployments per Redis. `RedisClient.build_key()` is the single choke point -- all keys, lock names, and SCAN patterns must go through it. Key shape: `maestro:STATE:domain:entity[:attribute]`, plus `REGISTERED:` (registry tracking) and `ENTITY_LOCK:` (distributed locks) prefixes. The APScheduler job store writes its own keys, passed explicitly as `{prefix}:apscheduler.jobs` / `{prefix}:apscheduler.run_times` in `_app.py`. Values are JSON-encoded with type metadata for lossless round-trips. Uses `SCAN` (not `KEYS`) for pattern matching. `StateId.cache_key` is a lazy property so IDs can be constructed before config exists.
 
 ### Trigger System (`triggers/`)
 
@@ -140,7 +143,7 @@ def without_context() -> None: ...
 | `maestro` | `MaestroEvent` enum | None | Threaded for STARTUP, synchronous for SHUTDOWN |
 | `hass` | `HassEvent` enum | None | Thread-per-trigger |
 
-Sun triggers are self-perpetuating: each fire computes the next solar event time from the `sun.sun` entity (a module-level `Sun("sun.sun")` singleton in `triggers/sun.py`; the solar attributes are built into the `Sun` domain class) and schedules itself again, with a 20-hour guard to prevent rescheduling loops.
+Sun triggers are self-perpetuating: each fire computes the next solar event time from the `sun.sun` entity (a module-level `Sun("sun.sun")` singleton in `triggers/_sun.py`; the solar attributes are built into the `Sun` domain class) and schedules itself again, with a 20-hour guard to prevent rescheduling loops.
 
 #### Test Registry
 
@@ -148,7 +151,7 @@ A separate `_test_registry` overlays the production `_registry`. Event-driven tr
 
 ### Entity System (`domains/`)
 
-#### Entity Base Class (`entity.py`)
+#### Entity Base Class (`_entity.py`)
 
 `Entity` is an ABC that all domain classes inherit from. Core behavior:
 
@@ -160,7 +163,7 @@ A separate `_test_registry` overlays the production `_registry`. Event-driven tr
 
 Constants: `ON`, `OFF`, `HOME`, `AWAY`, `UNAVAILABLE`, `UNKNOWN`.
 
-#### EntityAttribute Descriptor (`entity.py`)
+#### EntityAttribute Descriptor (`_entity.py`)
 
 A Python descriptor using PEP 695 generics (`EntityAttribute[T]`) constrained to `str | int | float | dict | list | bool | datetime`. Every attribute access is **live** -- it calls `StateManager.get_attribute_state()` each time (no local caching). Assignment delegates to `Entity.update()`.
 
@@ -170,7 +173,7 @@ Each domain (Light, Switch, Climate, Cover, Lock, Fan, MediaPlayer, etc.) subcla
 
 #### Custom Domain Subclasses (user project)
 
-Users extend built-in domain classes in their own custom domains package (`custom_domains_dir` config). Maestro imports the package during construction, before registry modules and scripts load. User code imports custom classes directly (`from custom_domains import Thermostat`) -- the library never imports user code into its own namespace. Custom domain modules import from the specific domain module (`from maestro.domains.climate import Climate`) and export via `__all__` in the package `__init__.py`.
+Users extend built-in domain classes in their own custom domains package (`custom_domains_dir` config). Maestro imports the package during construction, before registry modules and scripts load. User code imports custom classes directly (`from custom_domains import Thermostat`) -- the library never imports user code into its own namespace. Custom domain modules import their parent classes from the package (`from maestro.domains import Climate`) and export via `__all__` in the package `__init__.py`.
 
 ### Entity Registry (`registry/`)
 
@@ -189,26 +192,25 @@ Generation is line-format-sensitive: `_parse_module_entries` parses the generate
 
 `EntityId.resolve_entity()` dynamically imports `{registry_package}.{domain}` to map an ID string back to its registered instance.
 
-### WebSocket System (`integrations/home_assistant/`)
+### WebSocket System (`integrations/_home_assistant/`)
 
 - **`WebSocketClient`**: Async aiohttp-based client. Connects, authenticates with a long-lived token, subscribes to all HA events, and runs a listener loop that invokes a callback per event.
 - **`WebSocketManager`**: Lifecycle orchestrator running in a daemon thread with its own asyncio event loop. Handles reconnection with linear backoff (2s increments, max 30s), state sync on reconnect, and event routing to handlers.
 
 ### Utilities (`utils/`)
 
-- **Logging** (`logging.py`): `LoggerProxy` singleton bound to `log`. Every log line carries a `process_id` context variable for correlating event processing chains across threads. Always use structured key-value arguments, never string interpolation.
-- **Exceptions** (`exceptions.py`): Clean hierarchy with compact `class XxxError(BaseError): ...` syntax. Groups: configuration, HA client, entity, trigger, and test framework errors.
-- **Dates** (`dates.py`): `local_now()`, `resolve_timestamp()`, `format_duration()`, `IntervalSeconds` IntEnum for TTL constants.
-- **Scheduler** (`scheduler.py`): `JobScheduler` wraps APScheduler for one-shot scheduled jobs. Uses `get_app().scheduler` in production; auto-redirects to `MockJobScheduler` in tests.
-- **Push** (`push.py`): `Notif` class for iOS push notifications via HA. Supports priorities, actionable buttons, custom sounds, grouping/tagging. Sound/url defaults come from config at call time via the `_UnsetType` sentinel.
-- **Internal** (`internal.py`): `load_script_modules`, `import_custom_domains`, `configure_logging`, `test_mode_active`. Not part of the public API.
+- **Logging** (`_logging.py`): `LoggerProxy` singleton bound to `log`. Every log line carries a `process_id` context variable for correlating event processing chains across threads. Always use structured key-value arguments, never string interpolation.
+- **Dates** (`_dates.py`): `local_now()`, `resolve_timestamp()`, `format_duration()`, `IntervalSeconds` IntEnum for TTL constants.
+- **Scheduler** (`_scheduler.py`): `JobScheduler` wraps APScheduler for one-shot scheduled jobs. Uses `get_app().scheduler` in production; auto-redirects to `MockJobScheduler` in tests.
+- **Push** (`_push.py`): `Notif` class for iOS push notifications via HA. Supports priorities, actionable buttons, custom sounds, grouping/tagging. Sound/url defaults come from config at call time via the `_UnsetType` sentinel.
+- **Internal** (`_internal.py`): `load_script_modules`, `import_custom_domains`, `configure_logging`, `test_mode_active`. Not part of the public API.
 
 ### Testing Framework (`testing/`)
 
-- **`MaestroTest`** (`maestro_test.py`): The primary test interface, injected as the `mt` fixture. Provides methods for state setup, trigger simulation, action assertions, entity assertions, job scheduler assertions, and time mocking (via freezegun, imported lazily so the plugin loads without it).
-- **Mocks** (`mocks.py`): `MockHomeAssistantClient` (in-memory entity store + action call recording), `MockRedisClient` (in-memory dict), `MockJobScheduler` (stores jobs without executing). All extend real client classes with `@override`.
-- **Context** (`context.py`): Per-test global singletons (`_test_state_manager`, `_test_job_scheduler`) with lazy init and full reset between tests.
-- **Fixtures** (`fixtures.py`): Registered as a pytest plugin via the `pytest11` entry point, so consumers get the `mt` fixture with zero conftest wiring. `pytest_configure` registers a default `MaestroConfig`. The `mt` fixture creates a lightweight Flask app (never a `MaestroApp`) with in-memory SQLite, yields a `MaestroTest` instance, then tears down DB and resets test context.
+- **`MaestroTest`** (`_maestro_test.py`): The primary test interface, injected as the `mt` fixture. Provides methods for state setup, trigger simulation, action assertions, entity assertions, job scheduler assertions, and time mocking (via freezegun, imported lazily so the plugin loads without it).
+- **Mocks** (`_mocks.py`): `MockHomeAssistantClient` (in-memory entity store + action call recording), `MockRedisClient` (in-memory dict), `MockJobScheduler` (stores jobs without executing). All extend real client classes with `@override`.
+- **Context** (`_context.py`): Per-test global singletons (`_test_state_manager`, `_test_job_scheduler`) with lazy init and full reset between tests.
+- **Fixtures** (`_fixtures.py`): Registered as a pytest plugin via the `pytest11` entry point, so consumers get the `mt` fixture with zero conftest wiring. `pytest_configure` registers a default `MaestroConfig`. The `mt` fixture creates a lightweight Flask app (never a `MaestroApp`) with in-memory SQLite, yields a `MaestroTest` instance, then tears down DB and resets test context.
 
 Tests never construct `MaestroApp` (except the dedicated construction tests, which restore the singleton state afterward). Test-mode detection (`"pytest" in sys.modules`) inside `StateManager`, `invoke_funcs_threaded`, and `JobScheduler` makes execution synchronous and mock-backed automatically.
 
@@ -233,8 +235,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, final
 
 from apscheduler.triggers.cron import CronTrigger            # 2. third-party
 
-from maestro.triggers.types import TriggerFuncParamsT        # 3. local
-from maestro.utils.logging import log
+from maestro.triggers._types import TriggerFuncParamsT        # 3. local
+from maestro.utils._logging import log
 ```
 
 Use `TYPE_CHECKING` guard to avoid circular imports. Use `# type:ignore[import-untyped]` on untyped third-party imports.
@@ -290,7 +292,7 @@ class StateId(str):
 
 ### Error Handling
 
-- Custom exception hierarchy in `maestro/utils/exceptions.py` with compact `class XxxError(BaseError): ...` syntax
+- Custom exception hierarchy in `maestro/exceptions.py` with compact `class XxxError(BaseError): ...` syntax
 - Always chain exceptions with `from e`: `raise MalformedResponseError("msg") from e`
 - Use `contextlib.suppress(XxxError)` instead of bare `try/except` for expected exceptions
 - Use `log.exception(...)` at thread/background-task boundaries for unexpected errors
@@ -300,7 +302,7 @@ class StateId(str):
 Single `log` instance imported everywhere from `maestro.utils.logging`. Always use structured key-value arguments -- never string interpolation in log messages:
 
 ```python
-from maestro.utils.logging import log
+from maestro.utils._logging import log
 
 log.info("Registered trigger", function_name=func.__name__, trigger_type=trigger_type)
 log.exception("Failed to load module", module=module_name)
@@ -333,4 +335,8 @@ def test_motion_turns_on_light(mt: MaestroTest) -> None:
 
 ## Public API Discipline
 
-Public-facing packages (`domains/`, `triggers/`, `integrations/`, `utils/`, `testing/`) re-export their public API via `__init__.py` with `__all__` lists using `ClassName.__name__` references. Internal packages (`handlers/`, `registry/`) have empty `__init__.py`. Consumers import only from top-level packages; keep that contract when adding public symbols.
+The public API is exactly what the top-level packages re-export: consumers import from `maestro`, `maestro.domains`, `maestro.exceptions`, `maestro.integrations`, `maestro.triggers`, `maestro.registry`, `maestro.utils`, and `maestro.testing` -- never from submodules. Everything else is internal and carries an `_` prefix (modules like `utils/_dates.py`, whole packages like `_handlers/`).
+
+- Public packages re-export via `__init__.py` with `__all__` lists using `ClassName.__name__` references (quote the name for string constants and non-class symbols -- `X.__name__` on a string constant silently inserts its value).
+- Library-internal code imports directly from the underscored modules (`from maestro.utils._logging import log`), not from package `__init__` files, to avoid import cycles.
+- When adding a public symbol, define it in an internal module and re-export it from the owning top-level package. When adding an internal module, prefix it with `_`.

@@ -449,7 +449,7 @@ media_player.living_room.previous()
 
 You can extend built-in domain classes with device-specific or integration-specific functionality. Custom domains live in your project's `custom_domains_dir` (pass it to the `MaestroApp` constructor); Maestro imports the package at startup, before your registry and scripts load.
 
-**Important:** Custom domain modules import from the specific domain module (e.g., `maestro.domains.climate`). Your scripts import your custom classes directly from your package (e.g., `from custom_domains import TeslaHVAC`).
+**Important:** Custom domain modules import their parent classes from `maestro.domains`. Your scripts import your custom classes directly from your package (e.g., `from custom_domains import TeslaHVAC`).
 
 ### Example: Attribute Value Enums
 
@@ -460,7 +460,7 @@ Add type safety when passing argument values:
 from enum import StrEnum, auto
 from typing import override
 
-from maestro.domains.climate import Climate
+from maestro.domains import Climate
 
 
 class TeslaHVAC(Climate):
@@ -488,7 +488,7 @@ When a HA integration exposes actions under a different domain:
 
 ```python
 # custom_domains/sonos_speaker.py
-from maestro.domains.media_player import MediaPlayer
+from maestro.domains import MediaPlayer
 from maestro.integrations import Domain
 
 
