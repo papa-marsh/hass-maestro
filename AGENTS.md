@@ -8,6 +8,7 @@ Strongly-typed Python automation framework for Home Assistant, packaged as an in
 maestro/                  # The library package
   __init__.py             # Public surface: MaestroApp, get_app, get_config, db, __version__
   _app.py                 # MaestroApp (Flask subclass); all initialization in its constructor
+  _cli/                   # `hass-maestro` CLI; the init command scaffolds user projects from templates/
   _config.py              # MaestroConfig frozen dataclass + get_config()/register_config()
   _handlers/              # WebSocket event handler functions (state_changed, event_fired, etc.)
   exceptions.py           # Public exception hierarchy (maestro.exceptions)
@@ -35,6 +36,12 @@ their-project/
 ```
 
 The constructor puts the project root on `sys.path`, so `scripts`, `registry`, and `custom_domains` are top-level packages named after their directories (all three names are configurable). Script modules import as `scripts.family.bedroom` (package-scoped, single module identity).
+
+`hass-maestro init <dir>` scaffolds this layout as a ready-to-run project, including an example script + test, `.env`/`.env.example`, and a Docker deployment stack (app + redis + postgres).
+
+### The CLI (`_cli/`)
+
+The `hass-maestro` console script (declared in `[project.scripts]`) dispatches argparse subcommands from `_cli/main.py`. The `init` command renders `_cli/templates/*.tmpl` files into the target directory using `string.Template` (`$project_name`, `$timezone`); literal dollar signs in templates must be escaped as `$$`. Templates ship as package data (hatchling includes non-Python package files by default). Because templates embody the consumer-facing API, changes to either should be verified by scaffolding a project and running its full toolchain (`uv run pytest / ruff check / ruff format --check / mypy .`) with the `[tool.uv.sources]` entry pointed at the local checkout. The CLI is exempt from the `T20` no-print rule.
 
 ## Build / Lint / Test Commands
 

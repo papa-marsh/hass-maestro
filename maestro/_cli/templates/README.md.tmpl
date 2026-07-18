@@ -1,0 +1,43 @@
+# $project_name
+
+Home Assistant automations built on the [Maestro framework](https://github.com/papa-marsh/hass-maestro).
+
+## Setup
+
+1. Fill in `HOME_ASSISTANT_URL` and `HOME_ASSISTANT_TOKEN` in `.env`. Create a long-lived access token at `<your-hass-url>/profile/security`.
+2. Install dependencies: `uv sync`
+3. Run the example test: `uv run pytest`
+4. Deploy the stack (app + redis + postgres): `docker compose up -d --build` (or `just deploy`)
+
+On first run against a live Home Assistant instance, the entity registry generates automatically into `registry/` as entity state changes arrive (`AUTOPOPULATE_REGISTRY=True`). Once populated, import your entities with full autocomplete:
+
+```python
+from registry import light, switch, sensor
+```
+
+## Project Layout
+
+```
+app.py             # Entrypoint: constructs MaestroApp from env vars; served by gunicorn
+scripts/           # Your automation modules, auto-imported at startup
+registry/          # Generated entity registry (gitignored)
+custom_domains/    # Optional Entity subclass extensions
+```
+
+## Everyday Commands
+
+```bash
+uv run pytest              # Run tests
+uv run ruff check .        # Lint
+uv run ruff format .       # Format
+uv run mypy .              # Type check
+
+just deploy                # Rebuild and restart the Docker stack
+just logs                  # Tail app logs
+just shell                 # Flask shell with pre-loaded imports
+just upgrade-maestro       # Update the pinned hass-maestro version and redeploy
+```
+
+## Learn More
+
+The [framework README](https://github.com/papa-marsh/hass-maestro#readme) covers all trigger types, entity methods, push notifications, job scheduling, database models, and the testing framework.

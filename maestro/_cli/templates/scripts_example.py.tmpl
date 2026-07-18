@@ -1,0 +1,27 @@
+"""Example automation demonstrating maestro trigger decorators.
+
+Entities are normally imported from the generated registry (`from registry import ...`)
+once it has been populated from a live Home Assistant instance. This example constructs
+them directly so a fresh project works out of the box. Replace with your own automations.
+"""
+
+from maestro.domains import ON, BinarySensor, Switch
+from maestro.integrations import StateChangeEvent
+from maestro.triggers import cron_trigger, state_change_trigger
+from maestro.utils import log
+
+motion_sensor = BinarySensor("binary_sensor.example_motion")
+lamp = Switch("switch.example_lamp")
+
+
+@state_change_trigger(motion_sensor, to_state=ON)
+def motion_detected(state_change: StateChangeEvent) -> None:
+    """Turn on the lamp when motion is detected"""
+    log.info("Motion detected", entity_id=state_change.entity_id)
+    lamp.turn_on()
+
+
+@cron_trigger(hour=23, minute=0)
+def nightly_lights_out() -> None:
+    """Turn the lamp off every night at 11pm"""
+    lamp.turn_off()

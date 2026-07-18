@@ -1,0 +1,59 @@
+import os
+from pathlib import Path
+
+from maestro import MaestroApp
+
+
+def _notify_action_mappings() -> dict[str, str]:
+    return {
+        mapping.split(":")[0]: mapping.split(":")[1]
+        for mapping in os.environ.get("NOTIFY_ACTION_MAPPINGS", "").split(",")
+        if ":" in mapping
+    }
+
+
+app = MaestroApp(
+    hass_url=os.environ["HOME_ASSISTANT_URL"],
+    hass_token=os.environ["HOME_ASSISTANT_TOKEN"],
+    redis_host=os.environ["REDIS_HOST"],
+    redis_port=int(os.environ["REDIS_PORT"]),
+    db_url=os.environ.get("DATABASE_URL"),
+    custom_domains_dir=Path("custom_domains"),
+    timezone=os.environ.get("TIMEZONE", "$timezone"),
+    background_services=os.environ.get("MAESTRO_BACKGROUND_SERVICES", "true").lower() != "false",
+    autopopulate_registry=os.environ.get("AUTOPOPULATE_REGISTRY", "").lower() in ("true", "1"),
+    domain_ignore_list=tuple(d for d in os.environ.get("DOMAIN_IGNORE_LIST", "").split(",") if d),
+    notify_action_mappings=_notify_action_mappings(),
+)
+
+
+@app.shell_context_processor
+def make_shell_context() -> dict:
+    """Pre-load common imports for the flask shell command"""
+    from maestro.integrations import (
+        AttributeId,
+        EntityData,
+        EntityId,
+        HomeAssistantClient,
+        RedisClient,
+        StateChangeEvent,
+        StateId,
+        StateManager,
+    )
+    from maestro.registry import RegistryManager
+    from maestro.utils import (
+        IntervalSeconds,
+        JobScheduler,
+        Notif,
+        local_now,
+        resolve_timestamp,
+    )
+
+    hass = HomeAssistantClient()
+    redis = RedisClient()
+    sm = StateManager(hass_client=hass, redis_client=redis)
+    rm = RegistryManager()
+
+    print("Pre-loaded variables: hass, redis, sm, rm")
+
+    return locals()

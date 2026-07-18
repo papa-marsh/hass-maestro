@@ -1,0 +1,25 @@
+"""Tests for the example automation"""
+
+from maestro.domains import OFF, ON
+from maestro.integrations import Domain
+from maestro.testing import MaestroTest
+
+from scripts import example  # Importing the module under test registers its triggers
+
+
+def test_motion_turns_on_lamp(mt: MaestroTest) -> None:
+    """Motion detection turns the lamp on"""
+    mt.set_state(example.lamp, OFF)
+
+    mt.trigger_state_change(example.motion_sensor, old=OFF, new=ON)
+
+    mt.assert_action_called(Domain.SWITCH, "turn_on", entity_id=example.lamp.id)
+
+
+def test_nightly_lights_out(mt: MaestroTest) -> None:
+    """The nightly cron turns the lamp off"""
+    mt.set_state(example.lamp, ON)
+
+    example.nightly_lights_out()
+
+    mt.assert_action_called(Domain.SWITCH, "turn_off", entity_id=example.lamp.id)

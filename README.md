@@ -24,23 +24,43 @@ Maestro is a framework that lets you write Home Assistant automations in Python 
 
 ### Setup
 
-1. **Install the library**
+1. **Scaffold your project**
 
    ```bash
-   pip install hass-maestro
+   uvx --from git+https://github.com/papa-marsh/hass-maestro hass-maestro init my-automations
    ```
 
-2. **Create your project**
+   (Or just `hass-maestro init my-automations` if the package is already installed.)
+
+   This generates a complete, ready-to-run project:
 
    ```
    my-automations/
-     app.py             # Entrypoint: constructs the MaestroApp
-     scripts/           # Your automation modules
-     registry/          # Generated entity registry (created for you)
+     app.py             # Entrypoint: constructs the MaestroApp from env vars
+     scripts/           # Your automation modules (with a working example + test)
+     registry/          # Generated entity registry (populated from your HA instance)
      custom_domains/    # Optional Entity subclass extensions
+     .env               # Runtime configuration
+     Dockerfile / docker-compose.yml / justfile    # Docker deployment stack
    ```
 
-3. **Write your `app.py`**
+2. **Configure it**
+
+   Fill in `HOME_ASSISTANT_URL` and `HOME_ASSISTANT_TOKEN` in `.env`.
+
+   To create a long-lived access token, navigate to the `<hass_url>/profile/security` page in Home Assistant. Pro tip: create the token from a separate account named "Maestro" so entity state history shows which actions Maestro triggered.
+
+3. **Run it**
+
+   ```bash
+   docker compose up -d --build   # app + redis + postgres
+   ```
+
+   Or run bare-metal against your own Redis with `gunicorn app:app`—`MaestroApp` subclasses Flask, so it's directly servable by any WSGI server. Run exactly one worker process (gunicorn's default)—the websocket listener and scheduler live in-process, and multiple workers would run your automations multiple times.
+
+   You should see `WebSocket authenticated successfully` in the logs.
+
+   The generated `app.py` wires up the full constructor from environment variables, but a minimal maestro app is just:
 
    ```python
    import os
@@ -56,18 +76,6 @@ Maestro is a framework that lets you write Home Assistant automations in Python 
    ```
 
    Everything initializes inside the constructor: configuration, logging, script loading, the job scheduler, and the Home Assistant websocket connection. How you provide settings (env vars, a config file, hardcoded values) is entirely up to your `app.py`.
-
-   To create a long-lived access token, navigate to the `<hass_url>/profile/security` page in Home Assistant. Pro tip: create the token from a separate account named "Maestro" so entity state history shows which actions Maestro triggered.
-
-4. **Run it**
-
-   ```bash
-   gunicorn app:app
-   ```
-
-   `MaestroApp` subclasses Flask, so it's directly servable by any WSGI server. Run exactly one worker process (gunicorn's default)—the websocket listener and scheduler live in-process, and multiple workers would run your automations multiple times.
-
-   You should see `WebSocket authenticated successfully` in the logs.
 
 ### Constructor Reference
 
