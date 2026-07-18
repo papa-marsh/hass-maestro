@@ -7,7 +7,19 @@ name = "hass-maestro"
 version = "0.1.0"
 description = "Strongly-typed Python automation framework for Home Assistant"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "CC-BY-NC-4.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Marshall Warners", email = "m@marshallwarners.com" }]
+keywords = ["home-assistant", "automation", "home-automation", "framework"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Home Automation",
+    "Typing :: Typed",
+]
 requires-python = ">=3.14"
 dependencies = [
     "apscheduler>=3.11,<4",
@@ -19,6 +31,10 @@ dependencies = [
     "sqlalchemy>=2,<3",
     "structlog>=25,<26",
 ]
+
+[project.urls]
+Repository = "https://github.com/papa-marsh/hass-maestro"
+Issues = "https://github.com/papa-marsh/hass-maestro/issues"
 
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.2,<4"]
