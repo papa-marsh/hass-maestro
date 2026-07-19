@@ -27,15 +27,15 @@ Maestro is a framework that lets you write Home Assistant automations in Python 
 1. **Scaffold your project**
 
    ```bash
-   uvx hass-maestro init my-automations
+   uvx hass-maestro init <repo-name>
    ```
 
-   (Or just `hass-maestro init my-automations` if the package is already installed.)
+   (Or just `hass-maestro init <repo-name>` if the package is already installed.)
 
    This generates a complete, ready-to-run project:
 
    ```
-   my-automations/
+   <repo-name>/
      app.py             # Entrypoint: constructs the MaestroApp from env vars
      scripts/           # Your automation modules (with a working example + test)
      registry/          # Generated entity registry (populated from your HA instance)
