@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hass-maestro"
-version = "0.1.0"
+version = "0.1.1"
 description = "Strongly-typed Python automation framework for Home Assistant"
 readme = "README.md"
 license = "CC-BY-NC-4.0"

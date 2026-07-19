@@ -113,7 +113,7 @@ All your automation logic goes in your scripts directory. Modules are auto-impor
 Everything intended for use in automation scripts is exported from top-level `maestro` packages. You never need to import from deeper in the package structure. Your generated registry is its own top-level package in your project.
 
 ```python
-from maestro.domains import ON, OFF, HOME, AWAY        # State constants
+from maestro.domains import ON, OFF, HOME, AWAY         # State constants
 from maestro.triggers import state_change_trigger       # Trigger decorators
 from maestro.integrations import StateChangeEvent       # Event types
 from maestro.utils import Notif, JobScheduler, log      # Utilities
