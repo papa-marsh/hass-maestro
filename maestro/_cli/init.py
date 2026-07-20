@@ -5,7 +5,9 @@ from importlib import resources
 from pathlib import Path
 from string import Template
 
-# Templates use string.Template syntax ($project_name, $timezone).
+from maestro import __version__ as maestro_version
+
+# Templates use string.Template syntax ($project_name, $timezone, $maestro_version).
 # Literal dollar signs in template files must be escaped as `$$`.
 SCAFFOLD_FILES: tuple[tuple[str, str], ...] = (
     ("app.py.tmpl", "app.py"),
@@ -37,6 +39,7 @@ def run_init(directory: Path, timezone: str, force: bool) -> int:
     substitutions = {
         "project_name": _derive_project_name(directory.name),
         "timezone": timezone,
+        "maestro_version": maestro_version,
     }
 
     destinations = [dest for _, dest in SCAFFOLD_FILES] + list(EMPTY_PACKAGE_INIT_FILES)

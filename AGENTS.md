@@ -1,6 +1,6 @@
 # Maestro (hass-maestro)
 
-Strongly-typed Python automation framework for Home Assistant, packaged as an installable library (package name `hass-maestro`, import name `maestro`; not published to PyPI -- consumers resolve it from GitHub). Flask + SQLAlchemy + Redis + APScheduler + structlog. Python 3.14+. Users install the package, write a small `app.py` that constructs `MaestroApp`, and keep their automations, entity registry, and custom domains in their own project. The reference consumer is [maestro](https://github.com/papa-marsh/maestro).
+Strongly-typed Python automation framework for Home Assistant, packaged as an installable library (package name `hass-maestro`, import name `maestro`; published to PyPI -- releases are cut by pushing a `v*` tag, which triggers the publish workflow). Flask + SQLAlchemy + Redis + APScheduler + structlog. Python 3.14+. Users install the package, write a small `app.py` that constructs `MaestroApp`, and keep their automations, entity registry, and custom domains in their own project. The reference consumer is [maestro](https://github.com/papa-marsh/maestro).
 
 ## Project Structure
 
@@ -41,7 +41,7 @@ The constructor puts the project root on `sys.path`, so `scripts`, `registry`, a
 
 ### The CLI (`_cli/`)
 
-The `hass-maestro` console script (declared in `[project.scripts]`) dispatches argparse subcommands from `_cli/main.py`. The `init` command renders `_cli/templates/*.tmpl` files into the target directory using `string.Template` (`$project_name`, `$timezone`); literal dollar signs in templates must be escaped as `$$`. Templates ship as package data (hatchling includes non-Python package files by default). Because templates embody the consumer-facing API, changes to either should be verified by scaffolding a project and running its full toolchain (`uv run pytest / ruff check / ruff format --check / mypy .`) with the `[tool.uv.sources]` entry pointed at the local checkout. The CLI is exempt from the `T20` no-print rule.
+The `hass-maestro` console script (declared in `[project.scripts]`) dispatches argparse subcommands from `_cli/main.py`. The `init` command renders `_cli/templates/*.tmpl` files into the target directory using `string.Template` (`$project_name`, `$timezone`, `$maestro_version` -- the running library version, which the scaffolded pyproject uses as its minimum `hass-maestro` constraint); literal dollar signs in templates must be escaped as `$$`. Templates ship as package data (hatchling includes non-Python package files by default). Because templates embody the consumer-facing API, changes to either should be verified by scaffolding a project and running its full toolchain (`uv run pytest / ruff check / ruff format --check / mypy .`), adding a `[tool.uv.sources]` entry pointed at the local checkout when unreleased library changes are involved. The CLI is exempt from the `T20` no-print rule.
 
 ## Build / Lint / Test Commands
 
