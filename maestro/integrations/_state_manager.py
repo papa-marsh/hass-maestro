@@ -226,7 +226,7 @@ class StateManager:
 
         for attribute, value in entity_data.attributes.items():
             if value is None:
-                log.info(
+                log.debug(
                     "Cache skipped for attribute with value of None",
                     entity_id=entity_data.entity_id,
                     attribute=attribute,

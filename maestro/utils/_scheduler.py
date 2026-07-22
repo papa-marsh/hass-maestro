@@ -75,4 +75,4 @@ class JobScheduler:
         """Cancel a scheduled job by ID if it exists."""
         with suppress(JobLookupError):
             self.apscheduler.remove_job(job_id)
-            log.info("Removed job from APScheduler", job_id=job_id)
+            log.debug("Removed job from APScheduler", job_id=job_id)
