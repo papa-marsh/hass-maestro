@@ -10,6 +10,7 @@ class Domain(StrEnum):
     DEVICE_TRACKER = auto()
     EVENT = auto()
     FAN = auto()
+    FRONTEND = auto()
     HOME_ASSISTANT = auto()
     HUMIDIFIER = auto()
     INPUT_BOOLEAN = auto()
