@@ -1,5 +1,6 @@
 import re
 from datetime import timedelta
+from keyword import iskeyword
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -26,6 +27,7 @@ class RegistryManager:
     attr_import_string = "from maestro.domains import EntityAttribute"
     datetime_import_string = "from datetime import datetime"
     attributes_to_ignore: ClassVar = {
+        "__debug__",
         "id",
         "friendly_name",
         "last_changed",
@@ -294,6 +296,8 @@ class RegistryManager:
         new_entry = f"\nclass {entry_class_name}({parent_class}):"
         attribute_added = False
         for attribute, value in attributes.items():
+            if not attribute.isidentifier() or iskeyword(attribute):
+                continue
             if attribute not in cls.attributes_to_ignore:
                 type_string = value if type_as_value else type(value).__name__
                 if type_string != "NoneType":

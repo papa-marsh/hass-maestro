@@ -199,6 +199,8 @@ Generation is line-format-sensitive: `_parse_module_entries` parses the generate
 
 `EntityId.resolve_entity()` dynamically imports `{registry_package}.{domain}` to map an ID string back to its registered instance.
 
+`_build_entry` skips attribute names that are invalid Python identifiers, reserved keywords, or explicitly ignored (including `__debug__`, which Python forbids assigning). This validation applies to new modules and rebuilt entries independently of Redis cache filtering. Skipped names are not renamed.
+
 ### WebSocket System (`integrations/_home_assistant/`)
 
 - **`WebSocketClient`**: Async aiohttp-based client. Connects, authenticates with a long-lived token, subscribes to all HA events, and runs a listener loop that invokes a callback per event.
