@@ -4,6 +4,7 @@ and the split between built-in and custom domain imports.
 """
 
 from collections.abc import Generator
+from keyword import kwlist
 from pathlib import Path
 
 import pytest
@@ -48,6 +49,85 @@ def test_write_new_module_generates_entity_class(mt: MaestroTest, registry_dir: 
     assert "brightness = EntityAttribute(int)" in content
     assert 'desk_lamp = LightDeskLamp("light.desk_lamp")' in content
     assert "friendly_name" not in content
+
+
+@pytest.mark.parametrize(
+    "invalid_name",
+    [
+        "available_(important)",
+        "battery-level",
+        "1st_value",
+        "",
+        "__debug__",
+        *(word for word in kwlist if word.islower()),
+    ],
+)
+@pytest.mark.parametrize("include_valid", [False, True])
+def test_invalid_attribute_names_are_omitted(
+    mt: MaestroTest, registry_dir: Path, invalid_name: str, include_valid: bool
+) -> None:
+    """Generate compilable classes while retaining ordinary normalized attributes."""
+    attributes = {invalid_name: 1}
+    if include_valid:
+        attributes["Battery Level"] = 50
+    entity_data = EntityData(EntityId("sensor.battery"), "50", attributes)
+
+    RegistryManager.write_new_module(entity_data)
+
+    path = registry_dir / "sensor.py"
+    content = path.read_text()
+    compile(content, str(path), "exec")
+    assert f"    {invalid_name.lower()} = EntityAttribute(" not in content
+    assert ("battery_level = EntityAttribute(int)" in content) is include_valid
+    assert 'battery = SensorBattery("sensor.battery")' in content
+
+
+def test_repeated_refreshes_do_not_reintroduce_invalid_attributes(
+    mt: MaestroTest, registry_dir: Path
+) -> None:
+    """Keep the module compilable when either the affected or another entity refreshes."""
+    battery = EntityData(
+        EntityId("sensor.battery"),
+        "50",
+        {"available_(important)": 1, "class": 2, "battery_level": 50},
+    )
+    temperature = EntityData(EntityId("sensor.temperature"), "20", {"unit": "C"})
+    RegistryManager.write_new_module(battery)
+    path = registry_dir / "sensor.py"
+
+    for entity in (temperature, battery, temperature, battery):
+        RegistryManager.update_existing_module(entity)
+        content = path.read_text()
+        compile(content, str(path), "exec")
+        assert "available_(important)" not in content
+        assert "    class =" not in content
+        assert "battery_level = EntityAttribute(int)" in content
+        assert "unit = EntityAttribute(str)" in content
+        assert 'battery = SensorBattery("sensor.battery")' in content
+        assert 'temperature = SensorTemperature("sensor.temperature")' in content
+
+
+def test_rebuilt_entries_drop_unassignable_attributes(mt: MaestroTest, registry_dir: Path) -> None:
+    """Filter invalid names retained by the parser when rebuilding existing entries."""
+    battery = EntityData(EntityId("sensor.battery"), "50", {"battery_level": 50})
+    RegistryManager.write_new_module(battery)
+    path = registry_dir / "sensor.py"
+    path.write_text(
+        path.read_text().replace(
+            "class SensorBattery(Sensor):",
+            "class SensorBattery(Sensor):\n    class = EntityAttribute(int)\n"
+            "    1st_value = EntityAttribute(int)\n    __debug__ = EntityAttribute(bool)",
+        )
+    )
+
+    RegistryManager.update_existing_module(EntityData(EntityId("sensor.temperature"), "20", {}))
+
+    content = path.read_text()
+    compile(content, str(path), "exec")
+    assert "battery_level = EntityAttribute(int)" in content
+    assert "    class =" not in content
+    assert "1st_value" not in content
+    assert "__debug__" not in content
 
 
 def test_update_preserves_custom_parent_class(mt: MaestroTest, registry_dir: Path) -> None:
