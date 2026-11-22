@@ -907,7 +907,7 @@ def welcome_home(state_change: StateChangeEvent) -> None:
 
 **Problem**: Events seem to be missing
 
-After reconnection, Maestro automatically syncs all entity states if it was disconnected for more than 30 minutes. If you still see issues:
+After reconnection, Maestro automatically syncs all entity states if it was disconnected for 5 minutes or more. If you still see issues:
 
 1. Check logs for "State sync completed" message after reconnection
 2. Verify the entity's domain is not in `domain_ignore_list`
