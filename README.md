@@ -343,7 +343,7 @@ def on_shutdown() -> None:
 
 ### Home Assistant Trigger
 
-Runs on Home Assistant lifecycle events (HA starting up or shutting down).
+Runs when Home Assistant finishes starting up.
 
 ```python
 from maestro.triggers import hass_trigger, HassEvent
