@@ -1,4 +1,5 @@
 import asyncio
+import contextvars
 import threading
 from datetime import timedelta
 from typing import Any
@@ -138,6 +139,10 @@ class WebSocketManager:
             log.exception("Failed to sync states")
 
     def _handle_event(self, raw_event: dict[str, Any]) -> None:
+        """Route an event in an isolated context so its process ID doesn't leak into the loop"""
+        contextvars.copy_context().run(self._route_event, raw_event)
+
+    def _route_event(self, raw_event: dict[str, Any]) -> None:
         """Route incoming WebSocket events to appropriate handlers"""
         from maestro._app import get_app
 
