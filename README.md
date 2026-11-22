@@ -354,7 +354,7 @@ def on_ha_start() -> None:
     log.info("Home Assistant started")
 ```
 
-These are distinct from Maestro triggers—HA can restart independently while Maestro keeps running.
+These are distinct from Maestro triggers—HA can restart independently while Maestro keeps running. `HassEvent.STARTUP` fires on Home Assistant's `homeassistant_started` event, so it is missed if Maestro is not connected when HA finishes starting. Pair it with `@maestro_trigger(MaestroEvent.STARTUP)` when the function must also run after Maestro itself starts.
 
 ## Entity Registry
 

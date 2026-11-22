@@ -204,7 +204,7 @@ Generation is line-format-sensitive: `_parse_module_entries` parses the generate
 ### WebSocket System (`integrations/_home_assistant/`)
 
 - **`WebSocketClient`**: Async aiohttp-based client. Connects, authenticates with a long-lived token, subscribes to all HA events, and runs a listener loop that invokes a callback per event.
-- **`WebSocketManager`**: Lifecycle orchestrator running in a daemon thread with its own asyncio event loop. Handles reconnection with linear backoff (2s increments, max 30s), state sync on reconnect, and event routing to handlers.
+- **`WebSocketManager`**: Lifecycle orchestrator running in a daemon thread with its own asyncio event loop. Handles reconnection with linear backoff (2s increments, max 10s), state sync on reconnect, and event routing to handlers.
 
 ### Utilities (`utils/`)
 

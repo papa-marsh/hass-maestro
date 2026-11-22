@@ -8,7 +8,7 @@ from maestro.integrations._home_assistant.types import WebSocketEvent
 class EventTypeName(StrEnum):
     STATE_CHANGED = "state_changed"
     IOS_NOTIF_ACTION = "ios.notification_action_fired"
-    HASS_STARTUP = "maestro_hass_started"
+    HASS_STARTUP = "homeassistant_started"
     HASS_SHUTDOWN = "homeassistant_final_write"
     DEFAULT = "event_fired"
 

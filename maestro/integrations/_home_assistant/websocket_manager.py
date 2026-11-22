@@ -3,7 +3,7 @@ import threading
 from datetime import timedelta
 from typing import Any
 
-from maestro._handlers.types import EventTypeName, get_event_type
+from maestro._handlers.types import get_event_type
 from maestro.exceptions import WebSocketConnectionError
 from maestro.integrations._home_assistant.types import EventContext, WebSocketEvent
 from maestro.integrations._home_assistant.websocket_client import WebSocketClient
@@ -26,7 +26,8 @@ class WebSocketManager:
         self.client = WebSocketClient()
         self.redis = RedisClient()
         self.min_reconnect_delay = 2
-        self.max_reconnect_delay = 30
+        # Short enough to reconnect while HA is still starting, so homeassistant_started is received
+        self.max_reconnect_delay = 10
         self.reconnect_delay = self.min_reconnect_delay
         self.running = True
         self.process_id = build_process_id("websocket")
@@ -142,11 +143,7 @@ class WebSocketManager:
 
         app = get_app()
 
-        event_type_name = (
-            EventTypeName.HASS_STARTUP
-            if self.is_hass_startup_event(raw_event)  # TODO: This is a hack
-            else raw_event.get("event_type")
-        )
+        event_type_name = raw_event.get("event_type")
 
         if not event_type_name or not isinstance(event_type_name, str):
             raise WebSocketConnectionError("Malformed websocket event payload")
@@ -178,12 +175,3 @@ class WebSocketManager:
                 "Uncaught exception raised during WebSocket event",
                 event_type=event_type_name,
             )
-
-    @classmethod
-    def is_hass_startup_event(cls, raw_event: dict[str, Any]) -> bool:
-        if raw_event.get("event_type") != EventTypeName.STATE_CHANGED:
-            return False
-
-        entity_id: str = raw_event.get("data", {}).get("entity_id")
-
-        return entity_id == "sensor.home_assistant_uptime"
