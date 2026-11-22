@@ -13,7 +13,6 @@ from maestro.triggers._types import (
 
 class HassEvent(StrEnum):
     STARTUP = auto()
-    SHUTDOWN = auto()
 
 
 class HassTriggerManager(TriggerManager):
@@ -21,7 +20,7 @@ class HassTriggerManager(TriggerManager):
 
     @classmethod
     def fire_triggers(cls, event: HassEvent) -> None:
-        """Execute registered Home Assistant event (eg. startup or shutdown) functions."""
+        """Execute registered Home Assistant event (eg. startup) functions."""
         func_params = HassParams.FuncParams()
         registry = cls.get_registry(registry_union=True)
         funcs_to_execute = []

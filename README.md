@@ -343,7 +343,7 @@ def on_shutdown() -> None:
 
 ### Home Assistant Trigger
 
-Runs on Home Assistant lifecycle events (HA starting up or shutting down).
+Runs when Home Assistant finishes starting up.
 
 ```python
 from maestro.triggers import hass_trigger, HassEvent
@@ -354,7 +354,7 @@ def on_ha_start() -> None:
     log.info("Home Assistant started")
 ```
 
-These are distinct from Maestro triggers—HA can restart independently while Maestro keeps running.
+These are distinct from Maestro triggers—HA can restart independently while Maestro keeps running. `HassEvent.STARTUP` fires on Home Assistant's `homeassistant_started` event, so it is missed if Maestro is not connected when HA finishes starting. Pair it with `@maestro_trigger(MaestroEvent.STARTUP)` when the function must also run after Maestro itself starts.
 
 ## Entity Registry
 
@@ -907,7 +907,7 @@ def welcome_home(state_change: StateChangeEvent) -> None:
 
 **Problem**: Events seem to be missing
 
-After reconnection, Maestro automatically syncs all entity states if it was disconnected for more than 30 minutes. If you still see issues:
+After reconnection, Maestro automatically syncs all entity states if it was disconnected for 5 minutes or more. If you still see issues:
 
 1. Check logs for "State sync completed" message after reconnection
 2. Verify the entity's domain is not in `domain_ignore_list`

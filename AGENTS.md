@@ -104,7 +104,7 @@ When adding code that needs config, follow this rule strictly: read `get_config(
 - **Event-driven cache writes**: WebSocket `state_changed` events trigger immediate cache updates via `cache_entity()`, which overwrites all state + attributes and deletes stale attribute keys
 - **Type-preserving serialization**: Redis stores `{value, type}` JSON pairs so `int`, `float`, `bool`, `datetime`, `dict`, `list`, and `str` all round-trip correctly
 - **Distributed locking**: Entity mutation operations (`patch_hass_entity`, `post_hass_entity`) acquire Redis locks to prevent concurrent modifications
-- **Reconnection-aware sync**: If the WebSocket was disconnected for >30 minutes, a full REST API state sync runs on reconnect
+- **Reconnection-aware sync**: If the WebSocket was disconnected for 5 minutes or more, a full REST API state sync runs on reconnect
 
 In test mode, `StateManager.__init__()` auto-detects `test_mode_active()` and transparently swaps in `MockHomeAssistantClient` and `MockRedisClient`.
 
@@ -204,7 +204,7 @@ Generation is line-format-sensitive: `_parse_module_entries` parses the generate
 ### WebSocket System (`integrations/_home_assistant/`)
 
 - **`WebSocketClient`**: Async aiohttp-based client. Connects, authenticates with a long-lived token, subscribes to all HA events, and runs a listener loop that invokes a callback per event.
-- **`WebSocketManager`**: Lifecycle orchestrator running in a daemon thread with its own asyncio event loop. Handles reconnection with linear backoff (2s increments, max 30s), state sync on reconnect, and event routing to handlers.
+- **`WebSocketManager`**: Lifecycle orchestrator running in a daemon thread with its own asyncio event loop. Handles reconnection with linear backoff (2s increments, max 10s), state sync on reconnect, and event routing to handlers.
 
 ### Utilities (`utils/`)
 

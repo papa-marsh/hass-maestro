@@ -184,7 +184,7 @@ class MaestroTest:
         MaestroTriggerManager.fire_triggers(event)
 
     def trigger_hass_event(self, event: HassEvent) -> None:
-        """Simulate a Home Assistant lifecycle event (e.g. startup or shutdown)."""
+        """Simulate a Home Assistant lifecycle event (e.g. startup)."""
         HassTriggerManager.fire_triggers(event)
 
     # MARK: Action Call Assertions
