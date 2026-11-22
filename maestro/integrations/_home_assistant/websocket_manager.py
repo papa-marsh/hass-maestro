@@ -27,7 +27,6 @@ class WebSocketManager:
         self.client = WebSocketClient()
         self.redis = RedisClient()
         self.min_reconnect_delay = 2
-        # Short enough to reconnect while HA is still starting, so homeassistant_started is received
         self.max_reconnect_delay = 10
         self.reconnect_delay = self.min_reconnect_delay
         self.running = True
