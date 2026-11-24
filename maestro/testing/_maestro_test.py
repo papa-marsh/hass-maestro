@@ -14,6 +14,7 @@ from maestro.integrations._home_assistant.types import (
     AttributeId,
     EntityData,
     EntityId,
+    EntityNames,
     FiredEvent,
     NotifActionDataT,
     NotifActionEvent,
@@ -85,6 +86,20 @@ class MaestroTest:
         entity_data.attributes[attribute] = value
 
         self.state_manager.cache_entity(entity_data)
+
+    def set_names(
+        self,
+        entity: Entity | str,
+        entity_name: str,
+        device_name: str | None = None,
+        area_name: str | None = None,
+    ) -> None:
+        """Set the entity, device, and area names an entity resolves to."""
+        entity_id = entity.id if isinstance(entity, Entity) else EntityId(entity)
+        names = EntityNames(entity_name=entity_name, device_name=device_name, area_name=area_name)
+
+        self.hass_client.set_entity_names(entity_id, names)
+        self.redis_client.delete(self.state_manager.names_cache_key(entity_id))
 
     def set_action_responses(self, responses: list[dict[str, Any]]) -> None:
         """Mock the responses returned in order whenever a performed action expects a response"""

@@ -14,6 +14,7 @@ from maestro.utils._dates import IntervalSeconds, resolve_timestamp
 
 class CachePrefix(StrEnum):
     STATE = "STATE"
+    NAMES = "NAMES"
     REGISTERED = "REGISTERED"
     ENTITY_LOCK = "ENTITY_LOCK"
 

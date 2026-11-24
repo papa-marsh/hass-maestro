@@ -377,8 +377,17 @@ state = sensor.outdoor_temperature.state
 
 # Attributes are typed via EntityAttribute descriptors
 battery = sensor.outdoor_temperature.battery_level   # int
-friendly_name = sensor.outdoor_temperature.friendly_name  # str
 ```
+
+Every entity also exposes the names Home Assistant resolves through its registries:
+
+```python
+binary_sensor.west_stall.entity_name   # "West Stall" (str)
+binary_sensor.west_stall.device_name   # "West Stall Sensor" (str | None)
+binary_sensor.west_stall.area_name     # "Garage" (str | None)
+```
+
+`entity_name` is the entity's own name without its device name; for a device's main entity, which has no name of its own, it is the device name. Entities outside the registry (YAML-defined and Maestro-created entities) fall back to their state's `friendly_name`. Names are cached in Redis for a day and cleared whenever Home Assistant reports an entity, device, or area registry change.
 
 With `autopopulate_registry=True`, registry entries are created and refreshed automatically as entity state changes arrive. `RegistryManager.prune()` removes entries for entities that no longer exist in Home Assistant. The generated modules live in your project—committing or gitignoring them is your call.
 
@@ -708,6 +717,16 @@ def test_temperature_control(mt: MaestroTest) -> None:
     mt.set_state(sensor.temperature, "70")
     mt.trigger_state_change(sensor.temperature, old="70", new="76")
     mt.assert_action_called(Domain.SWITCH, "turn_on", entity_id=switch.fan.id)
+```
+
+**Test entity names:**
+
+Names default to the title-cased entity ID (`binary_sensor.west_stall` → "West Stall") with no device or area. Override them with `set_names`:
+
+```python
+def test_door_notification(mt: MaestroTest) -> None:
+    mt.set_names(binary_sensor.west_stall, "West Stall", device_name="West Stall Sensor")
+    ...
 ```
 
 **Test custom events:**

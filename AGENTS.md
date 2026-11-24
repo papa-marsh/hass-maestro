@@ -108,9 +108,17 @@ When adding code that needs config, follow this rule strictly: read `get_config(
 
 In test mode, `StateManager.__init__()` auto-detects `test_mode_active()` and transparently swaps in `MockHomeAssistantClient` and `MockRedisClient`.
 
+### Entity Names
+
+HA resolves entity, device, and area names from its registries; they never appear in state data. `HomeAssistantClient.get_entity_names()` renders HA's `entity_name(e, fallback=true)`, `device_name(e)`, and `area_name(e)` template functions through `POST /api/template` (the template emits JSON, so `execute_request` parses it normally). A null `entity_name` means the entity doesn't exist.
+
+`StateManager.get_entity_names()` is cache-through with a one-day TTL under `NAMES:` keys. These live outside the `STATE:` namespace on purpose: `cache_entity()` deletes any `STATE:` attribute key missing from an incoming state, which would wipe names on every state change. `handle_event_fired` clears all `NAMES:` keys on `entity_registry_updated`, `device_registry_updated`, and `area_registry_updated` before dispatching the event to triggers as usual. Those events are not given dedicated `EventTypeName` handlers, because `event_fired_trigger` refuses event types that have one, and users should still be able to subscribe to them.
+
+The registry generator ignores `friendly_name`, `entity_name`, `device_name`, and `area_name` state attributes so generated classes never shadow the name properties.
+
 ### Redis keys (`integrations/_redis.py`)
 
-Every maestro key is namespaced under the configurable `redis_key_prefix` (default `maestro`), enabling shared Redis instances and multiple maestro deployments per Redis. `RedisClient.build_key()` is the single choke point -- all keys, lock names, and SCAN patterns must go through it. Key shape: `maestro:STATE:domain:entity[:attribute]`, plus `REGISTERED:` (registry tracking) and `ENTITY_LOCK:` (distributed locks) prefixes. The APScheduler job store writes its own keys, passed explicitly as `{prefix}:apscheduler.jobs` / `{prefix}:apscheduler.run_times` in `_app.py`. Values are JSON-encoded with type metadata for lossless round-trips. Uses `SCAN` (not `KEYS`) for pattern matching. `StateId.cache_key` is a lazy property so IDs can be constructed before config exists.
+Every maestro key is namespaced under the configurable `redis_key_prefix` (default `maestro`), enabling shared Redis instances and multiple maestro deployments per Redis. `RedisClient.build_key()` is the single choke point -- all keys, lock names, and SCAN patterns must go through it. Key shape: `maestro:STATE:domain:entity[:attribute]`, plus `NAMES:` (resolved entity names), `REGISTERED:` (registry tracking), and `ENTITY_LOCK:` (distributed locks) prefixes. The APScheduler job store writes its own keys, passed explicitly as `{prefix}:apscheduler.jobs` / `{prefix}:apscheduler.run_times` in `_app.py`. State values are JSON-encoded with type metadata for lossless round-trips. Uses `SCAN` (not `KEYS`) for pattern matching. `StateId.cache_key` is a lazy property so IDs can be constructed before config exists.
 
 ### Trigger System (`triggers/`)
 
@@ -165,6 +173,7 @@ A separate `_test_registry` overlays the production `_registry`. Event-driven tr
 - **`state` property**: Reads from `StateManager.get_entity_state()` (cache-through). Setter is guarded by `allow_set_state` (only `True` for input_* domains and maestro).
 - **`perform_action(action, **kwargs)`**: Calls `StateManager.hass_client.perform_action()`. Uses `@overload` with `Literal` for polymorphic return types (`response_expected=True` returns a dict).
 - **`update(state, **attributes)`**: Delegates to `StateManager.patch_hass_entity()` for atomic read-modify-write.
+- **`entity_name` / `device_name` / `area_name` properties**: Read via `StateManager.get_entity_names()`. These come from HA's registries, not state attributes, so they are not `EntityAttribute`s (see Entity Names below). HA's `friendly_name` attribute is deliberately not exposed: it concatenates device and entity names, and HA plans to deprecate it.
 - **Equality**: Uses identity comparison (`self is other`). Comparing an Entity to a non-Entity raises `TypeError` with a helpful hint ("Did you mean entity.state?").
 - **Laziness**: Construction is side-effect-free; the `StateManager` is built on first state access. Entities are safe to instantiate at import time (registry modules do exactly this).
 
@@ -217,7 +226,7 @@ Generation is line-format-sensitive: `_parse_module_entries` parses the generate
 ### Testing Framework (`testing/`)
 
 - **`MaestroTest`** (`_maestro_test.py`): The primary test interface, injected as the `mt` fixture. Provides methods for state setup, trigger simulation, action assertions, entity assertions, job scheduler assertions, and time mocking (via freezegun, imported lazily so the plugin loads without it).
-- **Mocks** (`_mocks.py`): `MockHomeAssistantClient` (in-memory entity store + action call recording), `MockRedisClient` (in-memory dict), `MockJobScheduler` (stores jobs without executing). All extend real client classes with `@override`.
+- **Mocks** (`_mocks.py`): `MockHomeAssistantClient` (in-memory entity store, entity names defaulting to the title-cased entity ID and overridable via `mt.set_names`, action call recording), `MockRedisClient` (in-memory dict), `MockJobScheduler` (stores jobs without executing). All extend real client classes with `@override`.
 - **Context** (`_context.py`): Per-test global singletons (`_test_state_manager`, `_test_job_scheduler`) with lazy init and full reset between tests.
 - **Fixtures** (`_fixtures.py`): Registered as a pytest plugin via the `pytest11` entry point, so consumers get the `mt` fixture with zero conftest wiring. `pytest_configure` registers a default `MaestroConfig`. The `mt` fixture creates a lightweight Flask app (never a `MaestroApp`) with in-memory SQLite, yields a `MaestroTest` instance, then tears down DB and resets test context.
 

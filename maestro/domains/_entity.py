@@ -61,7 +61,6 @@ class Entity(ABC):
 
     id: EntityId
 
-    friendly_name = EntityAttribute(str)
     last_changed = EntityAttribute(datetime)
     last_updated = EntityAttribute(datetime)
     previous_state = EntityAttribute(str)
@@ -126,6 +125,21 @@ class Entity(ABC):
             raise TypeError(f"Expected string but got `{value}` of type `{type(value).__name__}`")
 
         self.update(state=value)
+
+    @property
+    def entity_name(self) -> str:
+        """The entity's own name, or its device's name if it's the device's main entity"""
+        return self.state_manager.get_entity_names(self.id).entity_name
+
+    @property
+    def device_name(self) -> str | None:
+        """The name of the device this entity belongs to"""
+        return self.state_manager.get_entity_names(self.id).device_name
+
+    @property
+    def area_name(self) -> str | None:
+        """The name of the area this entity (or its device) is assigned to"""
+        return self.state_manager.get_entity_names(self.id).area_name
 
     def update(self, state: str | None = None, **attributes: CachedValueT) -> EntityData:
         """Efficiently update entity state and/or multiple attributes in a single operation"""

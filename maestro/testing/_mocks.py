@@ -14,7 +14,12 @@ from maestro.domains._entity import Entity
 from maestro.exceptions import MockEntityDoesNotExistError
 from maestro.integrations._home_assistant.client import HomeAssistantClient
 from maestro.integrations._home_assistant.domain import Domain
-from maestro.integrations._home_assistant.types import EntityData, EntityId, FiredEvent
+from maestro.integrations._home_assistant.types import (
+    EntityData,
+    EntityId,
+    EntityNames,
+    FiredEvent,
+)
 from maestro.integrations._redis import CachedValueT, RedisClient
 from maestro.utils._dates import local_now
 
@@ -67,6 +72,7 @@ class MockHomeAssistantClient(HomeAssistantClient):
 
     def __init__(self) -> None:
         self._entities: dict[str, EntityData] = {}
+        self._entity_names: dict[str, EntityNames] = {}
         self._action_calls: list[ActionCall] = []
         self._fired_events: list[FiredEvent] = []
         self._action_response_queue: deque[dict[str, Any]] = deque()
@@ -75,6 +81,7 @@ class MockHomeAssistantClient(HomeAssistantClient):
     def reset(self) -> None:
         """Reset mock HASS client and clear stored entities, action calls, & fired events."""
         self._entities.clear()
+        self._entity_names.clear()
         self._action_calls.clear()
         self._fired_events.clear()
         self._action_response_queue.clear()
@@ -150,6 +157,19 @@ class MockHomeAssistantClient(HomeAssistantClient):
         """Get all mock entities"""
         return list(self._entities.values())
 
+    def set_entity_names(self, entity_id: str, names: EntityNames) -> None:
+        """Override the names resolved for an entity"""
+        self._entity_names[entity_id] = names
+
+    @override
+    def get_entity_names(self, entity_id: str) -> EntityNames:
+        """Get overridden names, defaulting to a title-cased entity name with no device or area"""
+        if entity_id in self._entity_names:
+            return self._entity_names[entity_id]
+
+        default_name = EntityId(entity_id).entity.replace("_", " ").title()
+        return EntityNames(entity_name=default_name, device_name=None, area_name=None)
+
     @override
     def set_entity(
         self,
@@ -165,9 +185,6 @@ class MockHomeAssistantClient(HomeAssistantClient):
         for timestamp_attr in ["last_changed", "last_reported", "last_updated"]:
             if timestamp_attr not in attributes:
                 attributes[timestamp_attr] = now
-
-        if "friendly_name" not in attributes:
-            attributes["friendly_name"] = entity_id.entity.replace("_", " ").title()
 
         entity_data = EntityData(
             entity_id=entity_id,

@@ -13,7 +13,7 @@ from maestro.exceptions import (
     MalformedResponseError,
 )
 from maestro.integrations._home_assistant.domain import Domain
-from maestro.integrations._home_assistant.types import EntityData, EntityId
+from maestro.integrations._home_assistant.types import EntityData, EntityId, EntityNames
 from maestro.utils._dates import resolve_timestamp, serialize_datetimes
 from maestro.utils._logging import log
 
@@ -72,6 +72,35 @@ class HomeAssistantClient:
             entities.append(entity)
 
         return entities
+
+    def get_entity_names(self, entity_id: str) -> EntityNames:
+        """Resolve an entity's entity, device, and area names via Home Assistant templating"""
+        path = "/api/template"
+        template = (
+            f"{{% set e = '{entity_id}' %}}"
+            "{{ {'entity_name': entity_name(e, fallback=true),"
+            " 'device_name': device_name(e),"
+            " 'area_name': area_name(e)} | tojson }}"
+        )
+
+        response_data, status = self.execute_request(
+            method=HTTPMethod.POST,
+            path=path,
+            body={"template": template},
+        )
+
+        if status != HTTPStatus.OK:
+            raise HomeAssistantClientError(f"Request failed fetching names for `{entity_id}`")
+        if not isinstance(response_data, dict):
+            raise MalformedResponseError(f"Invalid response shape fetching names for `{entity_id}`")
+        if response_data.get("entity_name") is None:
+            raise EntityDoesNotExistError(f"Entity `{entity_id}` doesn't exist")
+
+        return EntityNames(
+            entity_name=response_data["entity_name"],
+            device_name=response_data.get("device_name"),
+            area_name=response_data.get("area_name"),
+        )
 
     def set_entity(
         self,

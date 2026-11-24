@@ -1,10 +1,17 @@
 import json
 from contextlib import suppress
+from dataclasses import asdict
 
 from maestro._config import get_config
 from maestro.exceptions import AttributeDoesNotExistError, EntityDoesNotExistError
 from maestro.integrations._home_assistant.client import HomeAssistantClient
-from maestro.integrations._home_assistant.types import AttributeId, EntityData, EntityId, StateId
+from maestro.integrations._home_assistant.types import (
+    AttributeId,
+    EntityData,
+    EntityId,
+    EntityNames,
+    StateId,
+)
 from maestro.integrations._redis import CachedValue, CachedValueT, CachePrefix, RedisClient
 from maestro.registry._registry_manager import RegistryManager
 from maestro.utils._dates import IntervalSeconds, local_now, resolve_timestamp
@@ -81,6 +88,35 @@ class StateManager:
             )
 
         return attribute_state
+
+    @staticmethod
+    def names_cache_key(entity_id: EntityId) -> str:
+        return RedisClient.build_key(CachePrefix.NAMES, entity_id.domain, entity_id.entity)
+
+    def get_entity_names(self, entity_id: EntityId) -> EntityNames:
+        """Retrieve an entity's cached names or resolve them via HASS on cache miss"""
+        cache_key = self.names_cache_key(entity_id)
+
+        if (cached := self.redis_client.get(key=cache_key)) is not None:
+            return EntityNames(**json.loads(cached))
+
+        names = self.hass_client.get_entity_names(entity_id)
+        self.redis_client.set(
+            key=cache_key,
+            value=json.dumps(asdict(names)),
+            ttl_seconds=IntervalSeconds.ONE_DAY,
+        )
+
+        return names
+
+    def delete_all_cached_entity_names(self) -> int:
+        """Remove every cached entity name. Returns the count of keys deleted."""
+        pattern = RedisClient.build_key(CachePrefix.NAMES, "*")
+        keys = self.redis_client.get_keys(pattern=pattern)
+        if not keys:
+            return 0
+
+        return self.redis_client.delete(*keys)
 
     def get_cached_state(self, id: StateId) -> CachedValueT | None:
         """Retrieve an entity's state or attribute value from Redis"""
@@ -271,12 +307,13 @@ class StateManager:
 
     def delete_cached_entities(self, *entity_ids: EntityId) -> int:
         """
-        Remove entities' states, attributes, and registration markers from the cache.
+        Remove entities' states, attributes, names, and registration markers from the cache.
         Returns the count of keys deleted.
         """
         keys_to_delete: list[str] = []
         for entity_id in entity_ids:
             keys_to_delete.append(RedisClient.build_key(CachePrefix.REGISTERED, entity_id))
+            keys_to_delete.append(self.names_cache_key(entity_id))
             keys_to_delete.extend(self.get_all_entity_keys(entity_id))
         if not keys_to_delete:
             return 0

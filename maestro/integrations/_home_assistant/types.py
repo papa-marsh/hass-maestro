@@ -122,6 +122,15 @@ class EntityData:
 
 
 @dataclass
+class EntityNames:
+    """An entity's display name components as resolved by Home Assistant's naming system"""
+
+    entity_name: str
+    device_name: str | None
+    area_name: str | None
+
+
+@dataclass
 class EventContext:
     id: str
     parent_id: str | None
